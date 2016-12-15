@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package>
+  <name>ros_ibeo_lux</name>
+  <version>0.1.0</version>
+  <description>ROS driver for IBEO LUX</description>
+
+  <maintainer email="lxu@autonomoustuff.com">Lu Xu</maintainer>
+  <license>Closed Source</license>
+  <author email="lxu@autonomoustuff.com">Lu Xu</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>roscpp</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>as_generic_msg</build_depend>
+  <build_depend>message_generation</build_depend>
+
+  <run_depend>roscpp</run_depend>
+  <run_depend>message_runtime</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <run_depend>geometry_msgs</run_depend>
+  <run_depend>as_generic_msg</run_depend>
+
+</package>

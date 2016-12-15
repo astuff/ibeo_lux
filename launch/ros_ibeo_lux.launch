@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="veh_frame_id" default="veh_frame"/>
+    <arg name="lux_frame_id" default="ibeo_lux_frame"/>
+
+
+   <!--<group ns="AutonomouStuff" > -->
+        <node pkg="ros_ibeo_lux" type="ros_ibeo_lux" name="ros_ibeo_lux">
+            <!-- ip and port -->    
+            <param name="lux_ip" value="192.168.0.1"/>
+            <param name="lux_port" type= "int" value="12002"/>
+            <param name="veh_frame_id" value="$(arg veh_frame_id)"/>
+            <param name="sensor_frame_id" value="$(arg lux_frame_id)"/>
+           
+        </node>
+        <!--   <node pkg="as_delphi_esr" type="as_delphi_vehicle_pub" name="as_delphi_vehicle_pub"/> -->
+<!--  </group>  -->
+</launch>
+

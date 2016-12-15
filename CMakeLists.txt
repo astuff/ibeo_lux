@@ -1,0 +1,47 @@
+cmake_minimum_required(VERSION 2.8.3)
+project(ros_ibeo_lux)
+
+add_definitions(-std=c++11 -Wall -Wextra -DBUILD_ROS)
+
+## Find catkin and any catkin packages
+find_package(catkin REQUIRED COMPONENTS
+        roscpp
+        message_generation
+        std_msgs
+        genmsg
+        as_generic_msg
+        )
+## Declare ROS messages and services
+add_message_files(DIRECTORY msg FILES
+        # can Tx
+        lux_scan_data.msg
+        scan_point.msg
+        )
+
+## Generate added messages and services
+generate_messages(DEPENDENCIES std_msgs)
+
+## Declare a catkin package
+catkin_package(CATKIN_DEPENDS
+        message_runtime
+        std_msgs
+        as_generic_msg
+        )
+
+## Build executables
+include_directories(
+        core_ibeo_lux/include
+        ${catkin_INCLUDE_DIRS}
+)
+
+add_executable(ros_ibeo_lux
+        src/ros_ibeo_lux.cpp
+        core_ibeo_lux/src/TCPMsg.cpp
+        )
+
+
+target_link_libraries(ros_ibeo_lux ${catkin_LIBRARIES})
+add_dependencies(ros_ibeo_lux ros_ibeo_lux_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
+
+#target_link_libraries(as_delphi_vehicle_pub ${catkin_LIBRARIES})
+#add_dependencies(as_delphi_vehicle_pub ${catkin_EXPORTED_TARGETS})
