@@ -10,12 +10,19 @@ find_package(catkin REQUIRED COMPONENTS
         std_msgs
         genmsg
         as_generic_msg
+        pcl_ros
+        geometry_msgs
         )
 ## Declare ROS messages and services
 add_message_files(DIRECTORY msg FILES
-        # can Tx
+        # Tcp/Ip Tx
         lux_scan_data.msg
         scan_point.msg
+        lux_object_data.msg
+        object_list.msg
+        point2D.msg
+        size2D.msg
+        lux_vehicle_state.msg
         )
 
 ## Generate added messages and services
@@ -26,6 +33,8 @@ catkin_package(CATKIN_DEPENDS
         message_runtime
         std_msgs
         as_generic_msg
+        pcl_ros
+        geometry_msgs
         )
 
 ## Build executables

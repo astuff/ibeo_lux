@@ -24,15 +24,24 @@
 #include <string.h>
 #include <boost/program_options.hpp>
 #include <boost/asio.hpp>
-#include <as_ibeo_lux.hpp>
+//#include <as_ibeo_lux.hpp>
 #include <TCPMsg.hpp>
 
 //Ros
 #include <ros/ros.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl/point_types.h>
+
 
 //Tx
 #include <ros_ibeo_lux/lux_scan_data.h>
 #include <ros_ibeo_lux/scan_point.h>
+#include <ros_ibeo_lux/lux_object_data.h>
+#include <geometry_msgs/Point32.h>
+#include <ros_ibeo_lux/point2D.h>
+#include <ros_ibeo_lux/size2D.h>
+#include <ros_ibeo_lux/lux_vehicle_state.h>
+
 
 
 using namespace std;
@@ -48,7 +57,7 @@ const   unsigned int LUX_PAYLOAD_SIZE = 100000;
 size_t magicWord = 0xAFFEC0C2;
 
 
-
+// little endian
 double read_value(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, TCPMsg msg) {
     unsigned long rcvData = 0;
 
@@ -64,6 +73,20 @@ double read_value(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, TCPMsg 
     return retVal;
 }
 
+// big endian
+double read_header(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, TCPMsg msg) {
+    unsigned long rcvData = 0;
+
+    for (unsigned int i = 0; i <  msg.size; i++) {
+        rcvData <<= 8;
+
+        rcvData |= bufArray[(msg.msgOffset) + i];
+    }
+
+    double retVal = ((double)rcvData * msg.factor) - msg.valueOffset;
+
+    return retVal;
+}
 
 // Main routine
 int main(int argc, char **argv)
@@ -81,8 +104,10 @@ int main(int argc, char **argv)
     ros::Rate loop_rate(1.0/0.01);
 
     // Advertise messages to send
-    ros::Publisher objectsPub = n.advertise<ros_ibeo_lux::lux_scan_data>("lux_scan_data", 1);
-    
+    ros::Publisher scan_data_pub = n.advertise<ros_ibeo_lux::lux_scan_data>("lux_scan_data", 1);
+    ros::Publisher object_data_pub = n.advertise<ros_ibeo_lux::lux_object_data>("lux_object_data", 1);
+    ros::Publisher vehicle_state_pub = n.advertise<ros_ibeo_lux::lux_vehicle_state>("lux_vehicle_state", 1);
+
   /*  ros::Publisher radarstatus1_pub = n.advertise<as_delphi_esr::radar_status1>("radarstatus1", 1);
     ros::Publisher radarstatus2_pub = n.advertise<as_delphi_esr::radar_status2>("radarstatus2", 1);
     ros::Publisher radarstatus3_pub = n.advertise<as_delphi_esr::radar_status3>("radarstatus3", 1);
@@ -125,6 +150,9 @@ int main(int argc, char **argv)
     }
 */
     ros_ibeo_lux::lux_scan_data lux_scan_msg;
+    ros_ibeo_lux::lux_object_data lux_object_msg;
+    ros_ibeo_lux::lux_vehicle_state lux_vehicle_state_msg;
+
     TCPMsg    header_msg;
     header_msg.msgOffset = 0;
     header_msg.size = 4;
@@ -170,20 +198,24 @@ int main(int argc, char **argv)
             {
                 header_msg.size = 4;
                 header_msg.msgOffset = i;
-                first_four_bytes = (uint32_t)read_value(msgBuf, header_msg);
+                first_four_bytes = (uint32_t)read_header(msgBuf, header_msg);
                 if (first_four_bytes == magicWord)
                 {
                     ROS_INFO("Found the header msg");
                     header_msg.msgOffset = 8;
-                    data_size = (uint32_t)read_value(msgBuf, header_msg);
+                    data_size = (uint32_t)read_header(msgBuf, header_msg);
                     header_msg.msgOffset = 14;
                     header_msg.size = 2;
-                    data_type = (uint16_t)read_value(msgBuf, header_msg);
+                    data_type = (uint16_t)read_header(msgBuf, header_msg);
                     start_byte = i;
                     package_rcvd = true;
+                    ROS_INFO("Found Data Type %x", data_type);
+                    ROS_INFO("start byte %f", i);
+                    ROS_INFO("package received %d", package_rcvd);
                 }
                 i = i+1;
             }
+
             if (package_rcvd)
             {
                 //int count = 0;
@@ -191,6 +223,7 @@ int main(int argc, char **argv)
                 start_byte = start_byte + LUX_MESSAGE_DATA_OFFSET;
                 if (data_type == 0x2202)
                 {
+                    ROS_INFO("reading scan data");
                     TCPMsg   scan_data;
                     scan_data.size = 2;
                     scan_data.msgOffset = start_byte;
@@ -251,9 +284,154 @@ int main(int argc, char **argv)
                         lux_scan_msg.scan_points.push_back(scan_point_data);
                     }
                     lux_scan_msg.header.stamp = now;
-                    objectsPub.publish(lux_scan_msg);
+                    lux_scan_msg.header.frame_id = frame_id;
+                    scan_data_pub.publish(lux_scan_msg);
                     lux_scan_msg.scan_points.clear();
                 }
+                // ibeo LUX object data
+                if (data_type == 0x2221)
+                {
+                    ROS_INFO("reading object data");
+                    TCPMsg   object_data;
+                    object_data.size = 8;
+                    object_data.msgOffset = start_byte;
+                    object_data.factor = 1;
+                    object_data.valueOffset = 0;
+                    lux_object_msg.scan_start_time = (uint64_t)read_value(msgBuf, object_data);
+                    object_data.msgOffset = start_byte + 8;
+                    object_data.size = 2;
+                    lux_object_msg.num_of_objects = (uint16_t)read_value(msgBuf, object_data);
+
+                    ros_ibeo_lux::object_list scan_object;
+                    ros_ibeo_lux::point2D     object_point;
+                    object_data.msgOffset = start_byte + 10;
+
+                    for(int k = 0; k < lux_object_msg.num_of_objects; k++)
+                    {
+
+                        scan_object.ID = (uint16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 2;
+                        scan_object.age = (uint16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 4;
+                        scan_object.prediction_age = (uint16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 6;
+                        scan_object.relative_timestamp = (uint16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 8;
+                        scan_object.reference_point.x = (int16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 10;
+                        scan_object.reference_point.y = (int16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 12;
+                        scan_object.reference_point_sigma.x = (int16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 14;
+                        scan_object.reference_point_sigma.y = (int16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 16;
+                        scan_object.closest_point.x = (int16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 18;
+                        scan_object.closest_point.y = (int16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 20;
+                        scan_object.bounding_box_center.x = (int16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 22;
+                        scan_object.bounding_box_center.y = (int16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 24;
+                        scan_object.bounding_box_width = (uint16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 26;
+                        scan_object.bounding_box_length = (uint16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 28;
+                        scan_object.object_box_center.x = (int16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 30;
+                        scan_object.object_box_center.y = (int16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 32;
+                        scan_object.object_box_size.x = (uint16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 34;
+                        scan_object.object_box_size.y = (uint16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 36;
+                        scan_object.object_box_orientation = (int16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 38;
+                        scan_object.absolute_velocity.x = (int16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 40;
+                        scan_object.absolute_velocity.y = (int16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 42;
+                        scan_object.absolute_velocity_sigma.x = (uint16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 44;
+                        scan_object.absolute_velocity_sigma.y = (uint16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 46;
+                        scan_object.relative_velocity.x = (int16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 48;
+                        scan_object.relative_velocity.y = (int16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 50;
+                        scan_object.classification = (uint16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 52;
+                        scan_object.classification_age = (uint16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 54;
+                        scan_object.classification_certaiinty = (uint16_t)read_value(msgBuf, object_data);
+                        object_data.msgOffset = object_data.msgOffset + 56;
+                        scan_object.number_of_contour_points = (uint16_t)read_value(msgBuf, object_data);
+
+                        for(int j =0; j< scan_object.number_of_contour_points; j++)
+                        {
+                            object_data.msgOffset = object_data.msgOffset + 2*j;
+                            object_point.x = (int16_t)read_value(msgBuf, object_data);
+                            object_data.msgOffset = object_data.msgOffset + 2*(j + 1);
+                            object_point.y = (int16_t)read_value(msgBuf, object_data);
+                            scan_object.list_of_contour_points.push_back(object_point);
+                        }
+
+                        lux_object_msg.object.push_back(scan_object);
+                        scan_object.list_of_contour_points.clear();
+                    }
+                    lux_object_msg.header.stamp = now;
+                    lux_object_msg.header.frame_id = frame_id;
+                    object_data_pub.publish(lux_object_msg);
+                    lux_object_msg.object.clear();
+                }
+
+
+                if (data_type == 0x2805)
+                {
+                    ROS_INFO("reading vehicle state data");
+                    TCPMsg   vehicle_state_data;
+                    vehicle_state_data.size = 8;
+                    vehicle_state_data.msgOffset = start_byte;
+                    vehicle_state_data.factor = 1;
+                    vehicle_state_data.valueOffset = 0;
+                    lux_vehicle_state_msg.timestamp = (uint64_t)read_value(msgBuf, vehicle_state_data);
+                    vehicle_state_data.size = 2;
+                    vehicle_state_data.msgOffset = start_byte + 8;
+                    lux_vehicle_state_msg.scan_number = (uint16_t)read_value(msgBuf, vehicle_state_data);
+                    vehicle_state_data.msgOffset = start_byte + 10;
+                    lux_vehicle_state_msg.error_flags = (uint16_t)read_value(msgBuf, vehicle_state_data);
+                    vehicle_state_data.msgOffset = start_byte + 12;
+                    lux_vehicle_state_msg.longitudinal_velocity = (int16_t)read_value(msgBuf, vehicle_state_data);
+                    vehicle_state_data.msgOffset = start_byte + 14;
+                    lux_vehicle_state_msg.steering_wheel_angle = (int16_t)read_value(msgBuf, vehicle_state_data);
+                    vehicle_state_data.msgOffset = start_byte + 16;
+                    lux_vehicle_state_msg.front_wheel_angle = (int16_t)read_value(msgBuf, vehicle_state_data);
+                    vehicle_state_data.msgOffset = start_byte + 20;
+                    vehicle_state_data.size = 4;
+                    lux_vehicle_state_msg.vehicle_x = (int32_t)read_value(msgBuf, vehicle_state_data);
+                    vehicle_state_data.msgOffset = start_byte + 24;
+                    lux_vehicle_state_msg.vehicle_y = (int32_t)read_value(msgBuf, vehicle_state_data);
+                    vehicle_state_data.msgOffset = start_byte + 28;
+                    vehicle_state_data.size = 2;
+                    lux_vehicle_state_msg.course_angle = (int16_t)read_value(msgBuf, vehicle_state_data);
+                    vehicle_state_data.msgOffset = start_byte + 30;
+                    lux_vehicle_state_msg.time_difference = (uint16_t)read_value(msgBuf, vehicle_state_data);
+                    vehicle_state_data.msgOffset = start_byte + 32;
+                    lux_vehicle_state_msg.diff_in_x = (int16_t)read_value(msgBuf, vehicle_state_data);
+                    vehicle_state_data.msgOffset = start_byte + 34;
+                    lux_vehicle_state_msg.diff_in_y = (int16_t)read_value(msgBuf, vehicle_state_data);
+                    vehicle_state_data.msgOffset = start_byte + 36;
+                    lux_vehicle_state_msg.diff_in_heading = (int16_t)read_value(msgBuf, vehicle_state_data);
+                    vehicle_state_data.msgOffset = start_byte + 40;
+                    lux_vehicle_state_msg.current_yaw_rate = (int16_t)read_value(msgBuf, vehicle_state_data);
+
+                    lux_vehicle_state_msg.header.stamp = now;
+                    lux_vehicle_state_msg.header.frame_id = frame_id;
+                    vehicle_state_pub.publish(lux_vehicle_state_msg);
+
+                }
+
+
             }
             // Wait for next loop
             loop_rate.sleep();

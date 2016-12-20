@@ -44,9 +44,67 @@ public:
     int16_t    mounting_position_y;
     int16_t    mounting_position_z;
     uint16_t   scan_flags;
-    //scan_point scan_points[256];
-    //TCPMsg     lux_scan_msg();
-    //void parse(TCPMsg msg);
+    //void parse();
+};
+
+
+class Lux_Object_Data {
+public:
+    uint64_t       scan_start_time;
+    uint16_t       num_of_objects;
+    //void parse();
+};
+
+
+
+class scan_point
+{
+public:
+    uint8_t  layer;
+    uint8_t  echo;
+    uint8_t  flags;
+    int16_t  horizontal_angle;
+    uint16_t radial_distance;
+    uint16_t echo_pulse_width;
+
+    //void get_point(TCPMsg msg);
+};
+
+class object_list
+{
+public:
+    uint16_t    ID;
+    uint16_t    age;
+    uint16_t    prediction_age;
+    uint16_t    relative_timestamp;
+    point2D     reference_point;
+    point2D     reference_point_sigma;
+    point2D     closest_point;
+    point2D     bounding_box_center;
+    uint16_t    bounding_box_width;
+    uint16_t    bounding_box_length;
+    point2D     object_box_center;
+    size2D      object_box_size;
+    int16_t     object_box_orientation;
+    point2D     absolute_velocity;
+    size2D      absolute_velocity_sigma;
+    point2D     relative_velocity;
+    uint16_t    classification;
+    uint16_t    classification_age;
+    uint16_t    classification_certaiinty;
+    uint16_t    number_of_contour_points;
+};
+
+class  point2D
+{
+    int16_t     x;
+    int16_t     y;
+};
+
+class  size2D
+{
+    uint16_t    x;
+    uint16_t    y;
 };
 
 /*class ESR_Status1_Message {
