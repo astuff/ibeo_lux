@@ -26,7 +26,7 @@
 
 #include <TCPMsg.hpp>
 
-class Lux_Scan_Data {
+class lux_scan_data_2202 {
 public:
     uint16_t   scan_number;
     uint16_t   scan_status;

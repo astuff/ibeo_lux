@@ -1,4 +1,4 @@
-Header  header
+lux_header   header
 
 #Ibeo Lux scan data
 uint16       scan_number

@@ -1,4 +1,4 @@
-Header  header
+lux_header    header
 
 #Ibeo Lux object data
 uint64        scan_start_time
