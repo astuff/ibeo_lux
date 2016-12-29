@@ -35,10 +35,10 @@ const double PI = 3.1415926535897;
 
 
 // little endian
-double read_value(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, TCPMsg msg);
+double read_little_endian(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, TCPMsg msg);
 
 // big endian
-double read_header(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, TCPMsg msg);
+double read_big_endian(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, TCPMsg msg);
 
 double convertAngle(int angle, int angle_tick_per_rotation);
 

@@ -30,7 +30,7 @@
 #include <as_ibeo_lux.hpp>
 
 // little endian
-double read_value(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, TCPMsg msg) {
+double read_little_endian(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, TCPMsg msg) {
     unsigned long rcvData = 0;
 
     for (unsigned int i = msg.size; i > 0; i--) {
@@ -46,7 +46,7 @@ double read_value(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, TCPMsg 
 }
 
 // big endian
-double read_header(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, TCPMsg msg) {
+double read_big_endian(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, TCPMsg msg) {
     unsigned long rcvData = 0;
 
     for (unsigned int i = 0; i <  msg.size; i++) {
