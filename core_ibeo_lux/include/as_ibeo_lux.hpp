@@ -26,7 +26,15 @@
 
 #include <TCPMsg.hpp>
 
-class lux_scan_data_2202 {
+const size_t ERROR_UNHANDLED_EXCEPTION = 2;
+//const unsigned int ESR_XCP_PAYLOAD_SIZE =8568;
+const uint8_t  LUX_MESSAGE_DATA_OFFSET = 24;
+const   unsigned int LUX_PAYLOAD_SIZE = 100000;
+const size_t magicWord = 0xAFFEC0C2;
+const double PI = 3.1415926535897;
+
+
+/*class lux_scan_data_2202 {
 public:
     uint16_t   scan_number;
     uint16_t   scan_status;
@@ -44,7 +52,7 @@ public:
     int16_t    mounting_position_y;
     int16_t    mounting_position_z;
     uint16_t   scan_flags;
-    //void parse();
+    void parse(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, TCPMsg msg, unsigned int index);
 };
 
 
@@ -77,7 +85,7 @@ public:
     uint16_t    age;
     uint16_t    prediction_age;
     uint16_t    relative_timestamp;
-    point2D     reference_point;
+    point2D     reference_point_x;
     point2D     reference_point_sigma;
     point2D     closest_point;
     point2D     bounding_box_center;
@@ -95,29 +103,15 @@ public:
     uint16_t    number_of_contour_points;
 };
 
-class  point2D
-{
-    int16_t     x;
-    int16_t     y;
-};
+*/
 
-class  size2D
-{
-    uint16_t    x;
-    uint16_t    y;
-};
+// little endian
+double read_value(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, TCPMsg msg);
 
-/*class ESR_Status1_Message {
-public:
-    uint16_t timeStamp;
-    uint8_t rollingCount;
-    bool commError;
-    int16_t curvature;
-    uint16_t scanId;
-    float yawRate;
-    float vehicleSpeedCalc;
+// big endian
+double read_header(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, TCPMsg msg);
 
-    void parse(unsigned char *in);
-};*/
+double convertAngle(int angle, int angle_tick_per_rotation);
+
 
 #endif

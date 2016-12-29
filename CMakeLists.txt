@@ -65,9 +65,9 @@ include_directories(
 )
 
 add_executable(ros_ibeo_lux
-        src/ros_ibeo_lux.cpp
         core_ibeo_lux/src/TCPMsg.cpp
-        )
+        core_ibeo_lux/src/as_ibeo_lux.cpp
+        src/ros_ibeo_lux.cpp)
 
 
 target_link_libraries(ros_ibeo_lux ${catkin_LIBRARIES})

@@ -27,8 +27,8 @@
 #include <stdio.h>
 
 
-//#include <as_ibeo_lux.hpp>
-#include <TCPMsg.hpp>
+#include <as_ibeo_lux.hpp>
+//#include <TCPMsg.hpp>
 
 //Ros
 #include <ros/ros.h>
@@ -74,53 +74,6 @@ using namespace std;
 using namespace boost;
 using boost::asio::ip::tcp;
 namespace po = boost::program_options;
-
-
-const size_t ERROR_UNHANDLED_EXCEPTION = 2;
-//const unsigned int ESR_XCP_PAYLOAD_SIZE =8568;
-const uint8_t  LUX_MESSAGE_DATA_OFFSET = 24;
-const   unsigned int LUX_PAYLOAD_SIZE = 100000;
-size_t magicWord = 0xAFFEC0C2;
-const double PI = 3.1415926535897;
-
-
-// little endian
-double read_value(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, TCPMsg msg) {
-    unsigned long rcvData = 0;
-
-    for (unsigned int i = msg.size; i > 0; i--) {
-        rcvData <<= 8;
-        //Need to use -1 because array is 0-based
-        //and offset is not.
-        rcvData |= bufArray[(msg.msgOffset - 1) + i];
-    }
-
-    double retVal = ((double)rcvData * msg.factor) - msg.valueOffset;
-
-    return retVal;
-}
-
-// big endian
-double read_header(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, TCPMsg msg) {
-    unsigned long rcvData = 0;
-
-    for (unsigned int i = 0; i <  msg.size; i++) {
-        rcvData <<= 8;
-
-        rcvData |= bufArray[(msg.msgOffset) + i];
-    }
-
-    double retVal = ((double)rcvData * msg.factor) - msg.valueOffset;
-
-    return retVal;
-}
-
-double convertAngle(int angle, int angle_tick_per_rotation)
-{
-    return 2.0 * PI * static_cast<double>(angle / angle_tick_per_rotation);
-}
-
-
 
 // Main routine
 int main(int argc, char **argv)
@@ -200,13 +153,12 @@ int main(int argc, char **argv)
             //double nowSec = now.toSec();
 
             std::array<unsigned char, LUX_PAYLOAD_SIZE> msgBuf;
-            size_t rcvSize;
             system::error_code error;
             unsigned long first_four_bytes;
 
             //memset(&msgBuf[0],0,LUX_PAYLOAD_SIZE);
 
-            rcvSize = socket.read_some(asio::buffer(msgBuf), error);
+            int rcvSize = socket.read_some(asio::buffer(msgBuf), error);
             
             bool package_rcvd = false;
             int i = 0;
@@ -295,7 +247,7 @@ int main(int argc, char **argv)
                     //scan_data.msgOffset = start_byte + 44;
                     int    pt_start_byte = start_byte + 44;
                     //scan_data.msgOffset = pt_start_byte;
-                    scan_data.size = 1;
+                    //scan_data.size = 1;
                     for(int k = 0; k < lux_scan_msg.num_scan_pts; k++)
                     {
                         //scan_data.msgOffset = scan_data.msgOffset + 10*k;
@@ -312,14 +264,22 @@ int main(int argc, char **argv)
                         scan_point_data.echo_pulse_width = (uint16_t)read_value(msgBuf, scan_data);
                         pt_start_byte = pt_start_byte + 10;
                         //scan_data.msgOffset = pt_start_byte;
-                        scan_data.size = 1;
                         lux_scan_msg.scan_points.push_back(scan_point_data);
                         //point cloud
                         cloud_point.label = scan_point_data.flags;
+                        double phi;
+                        switch (scan_point_data.layer)
+                        {
+                            case 0: phi = -1.6 * PI / 180.0; break;
+                            case 1: phi = -0.8 * PI / 180.0; break;
+                            case 2: phi =  0.8 * PI / 180.0; break;
+                            case 3: phi =  1.6 * PI / 180.0; break;
+                            default: phi = 0.0; break;
+                        }
 
-                        cloud_point.y = 0.01*(double)scan_point_data.radial_distance*cos(convertAngle(scan_point_data.horizontal_angle,lux_scan_msg.angle_ticks))*cos((scan_point_data.layer*0.8-1.2)*PI/180);
-                        cloud_point.x = 0.01*(double)scan_point_data.radial_distance*sin(convertAngle(scan_point_data.horizontal_angle,lux_scan_msg.angle_ticks))*cos((scan_point_data.layer*0.8-1.2)*PI/180);
-                        cloud_point.z = 0.01*(double)scan_point_data.radial_distance*sin((scan_point_data.layer*0.8-1.2)*PI/180);
+                        cloud_point.x = 0.01*(double)scan_point_data.radial_distance*cos(convertAngle(scan_point_data.horizontal_angle,lux_scan_msg.angle_ticks))*cos(phi);
+                        cloud_point.y = 0.01*(double)scan_point_data.radial_distance*sin(convertAngle(scan_point_data.horizontal_angle,lux_scan_msg.angle_ticks))*cos(phi);
+                        cloud_point.z = 0.01*(double)scan_point_data.radial_distance*sin(phi);
 
                         pcl_cloud.points.push_back(cloud_point);
 
