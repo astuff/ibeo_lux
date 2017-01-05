@@ -42,5 +42,7 @@ double read_big_endian(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, TC
 
 double convertAngle(int angle, int angle_tick_per_rotation);
 
+unsigned char   read_one_byte(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, uint16_t index);
+
 
 #endif

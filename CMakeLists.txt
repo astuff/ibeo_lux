@@ -42,6 +42,7 @@ add_message_files(DIRECTORY msg FILES
         lux_fusion_img_2403.msg
         mount_position.msg
         lux_fusion_vehicle_state.msg
+        ethernet_raw_tx.msg
         )
 
 ## Generate added messages and services

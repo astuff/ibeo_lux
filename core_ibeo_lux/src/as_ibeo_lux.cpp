@@ -65,3 +65,7 @@ double convertAngle(int angle, int angle_tick_per_rotation)
     return 2.0 * PI * static_cast<double>(angle / angle_tick_per_rotation);
 }
 
+unsigned char   read_one_byte(std::array<unsigned char, LUX_PAYLOAD_SIZE> &bufArray, uint16_t index){
+
+    return (bufArray[index]);
+}
