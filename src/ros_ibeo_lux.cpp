@@ -29,28 +29,28 @@
 
 
 //Tx
-#include <ros_ibeo_lux/lux_scan_data.h>
-#include <ros_ibeo_lux/scan_point.h>
-#include <ros_ibeo_lux/lux_object_data.h>
 #include <ros_ibeo_lux/point2D.h>
 #include <ros_ibeo_lux/size2D.h>
 #include <ros_ibeo_lux/float2D.h>
-#include <ros_ibeo_lux/lux_vehicle_state.h>
 #include <ros_ibeo_lux/test_point.h>
 #include <ros_ibeo_lux/lux_header.h>
-#include <ros_ibeo_lux/lux_error_warning.h>
-#include <ros_ibeo_lux/lux_fusion_scan_data.h>
+#include <ros_ibeo_lux/scan_point.h>
+#include <ros_ibeo_lux/resolution.h>
+#include <ros_ibeo_lux/mount_position.h>
 #include <ros_ibeo_lux/lux_fusion_scan_info.h>
 #include <ros_ibeo_lux/lux_fusion_scan_point.h>
+#include <ros_ibeo_lux/lux_scan_data_2202.h>
+#include <ros_ibeo_lux/lux_object_data_2221.h>
+#include <ros_ibeo_lux/lux_vehicle_state_2805.h>
+#include <ros_ibeo_lux/lux_error_warning_2030.h>
+#include <ros_ibeo_lux/lux_fusion_scan_data_2204.h>
 #include <ros_ibeo_lux/lux_fusion_scan_data_2205.h>
 #include <ros_ibeo_lux/lux_fusion_scan_info_2205.h>
-#include <ros_ibeo_lux/resolution.h>
 #include <ros_ibeo_lux/lux_fusion_object_data_2225.h>
 #include <ros_ibeo_lux/object_list_2225.h>
 #include <ros_ibeo_lux/lux_fusion_object_data_2280.h>
 #include <ros_ibeo_lux/object_list_2280.h>
 #include <ros_ibeo_lux/lux_fusion_img_2403.h>
-#include <ros_ibeo_lux/mount_position.h>
 #include <ros_ibeo_lux/lux_fusion_vehicle_state.h>
 #include <ros_ibeo_lux/ethernet_raw_tx.h>
 
@@ -82,11 +82,11 @@ int main(int argc, char **argv)
 
     // Advertise messages to send
     ros::Publisher eth0_raw_tx_pub = n.advertise<ros_ibeo_lux::ethernet_raw_tx>("eth0_raw_tx", 1);
-    ros::Publisher scan_data_pub = n.advertise<ros_ibeo_lux::lux_scan_data>("lux_scan_data_2202", 1);
-    ros::Publisher object_data_pub = n.advertise<ros_ibeo_lux::lux_object_data>("lux_object_data_2221", 1);
-    ros::Publisher vehicle_state_pub = n.advertise<ros_ibeo_lux::lux_vehicle_state>("lux_vehicle_state_2805", 1);
-    ros::Publisher error_warn_pub = n.advertise<ros_ibeo_lux::lux_error_warning>("lux_error_warning_2030", 1);
-    ros::Publisher fusion_scan_2204_pub = n.advertise<ros_ibeo_lux::lux_fusion_scan_data>("lux_fusion_scan_2204", 1);
+    ros::Publisher scan_data_pub = n.advertise<ros_ibeo_lux::lux_scan_data_2202>("lux_scan_data_2202", 1);
+    ros::Publisher object_data_pub = n.advertise<ros_ibeo_lux::lux_object_data_2221>("lux_object_data_2221", 1);
+    ros::Publisher vehicle_state_pub = n.advertise<ros_ibeo_lux::lux_vehicle_state_2805>("lux_vehicle_state_2805", 1);
+    ros::Publisher error_warn_pub = n.advertise<ros_ibeo_lux::lux_error_warning_2030>("lux_error_warning_2030", 1);
+    ros::Publisher fusion_scan_2204_pub = n.advertise<ros_ibeo_lux::lux_fusion_scan_data_2204>("lux_fusion_scan_2204", 1);
     ros::Publisher fusion_scan_2205_pub = n.advertise<ros_ibeo_lux::lux_fusion_scan_data_2205>("lux_fusion_scan_2205", 1);
     ros::Publisher fusion_object_2225_pub = n.advertise<ros_ibeo_lux::lux_fusion_object_data_2225>("lux_fusion_object_2225", 1);
     ros::Publisher fusion_object_2280_pub = n.advertise<ros_ibeo_lux::lux_fusion_object_data_2280>("lux_fusion_object_2280", 1);
@@ -94,7 +94,7 @@ int main(int argc, char **argv)
     ros::Publisher fusion_vehicle_2806_pub = n.advertise<ros_ibeo_lux::lux_fusion_vehicle_state>("lux_fusion_vehicle_state_2806", 1);
     ros::Publisher fusion_vehicle_2807_pub = n.advertise<ros_ibeo_lux::lux_fusion_vehicle_state>("lux_fusion_vehicle_state_2807", 1);
 
-
+    // publish the visualization data
     ros::Publisher scan_pointcloud_2202_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("lux_point_cloud_2202", 1);
     ros::Publisher object_markers_2221_pub = n.advertise<visualization_msgs::MarkerArray>("object_markers_array_2221", 1);
     ros::Publisher object_marker_2221_pub = n.advertise<visualization_msgs::Marker>("object_markers_2221", 1);
@@ -190,7 +190,7 @@ int main(int argc, char **argv)
                 {
                     ROS_INFO("reading scan data 0x2202");
                     TCPMsg   scan_data;
-                    ros_ibeo_lux::lux_scan_data        lux_scan_msg;
+                    ros_ibeo_lux::lux_scan_data_2202        lux_scan_msg;
                     ros_ibeo_lux::ethernet_raw_tx      eth0_raw_msg;
 
                     //publish the point cloud
@@ -245,11 +245,6 @@ int main(int argc, char **argv)
                     //scan_data.size = 1;
                     for(int k = 0; k < lux_scan_msg.num_scan_pts; k++)
                     {
-                        //scan_data.msgOffset = scan_data.msgOffset + 10*k;
-                        /*scan_point_data.layer = (uint8_t)(msgBuf[pt_start_byte] & 0x0F);
-                        scan_point_data.echo = (uint8_t)((msgBuf[pt_start_byte] >> 4) & 0x0F);*/
-                        /*scan_point_data.layer = (uint8_t)(msgBuf[pt_start_byte] & 0x0F);
-                        scan_point_data.echo = (uint8_t)((msgBuf[pt_start_byte] >> 4) & 0x0F);*/
                         scan_data.size = 1;
                         scan_data.msgOffset = pt_start_byte;
                         scan_point_data.layer = (uint8_t)(read_one_byte(msgBuf,scan_data.msgOffset) & 0x0F);
@@ -311,7 +306,7 @@ int main(int argc, char **argv)
                 {
                     ROS_INFO("reading object data 0x2221");
                     TCPMsg   object_data;
-                    ros_ibeo_lux::lux_object_data      lux_object_msg;
+                    ros_ibeo_lux::lux_object_data_2221      lux_object_msg;
                     visualization_msgs::MarkerArray   object_markers;
                     ros_ibeo_lux::ethernet_raw_tx      eth0_raw_msg;
 
@@ -531,7 +526,7 @@ int main(int argc, char **argv)
                 {
                     ROS_INFO("reading vehicle state data 0x2805");
                     TCPMsg   vehicle_state_data;
-                    ros_ibeo_lux::lux_vehicle_state    lux_vehicle_state_msg;
+                    ros_ibeo_lux::lux_vehicle_state_2805    lux_vehicle_state_msg;
                     ros_ibeo_lux::ethernet_raw_tx      eth0_raw_msg;
 
                     vehicle_state_data.size = 8;
@@ -587,7 +582,7 @@ int main(int argc, char **argv)
                 {
                     ROS_INFO("reading lux errors and warnings data 0x2030");
                     TCPMsg   error_warn_data;
-                    ros_ibeo_lux::lux_error_warning    lux_error_warning_msg;
+                    ros_ibeo_lux::lux_error_warning_2030    lux_error_warning_msg;
                     ros_ibeo_lux::ethernet_raw_tx      eth0_raw_msg;
 
                     char     temp_value_string[10];
@@ -624,7 +619,7 @@ int main(int argc, char **argv)
                 {
                     ROS_INFO("reading FUSION SYSTEM/ECU scan data 0x2204");
                     TCPMsg   scan_data;
-                    ros_ibeo_lux::lux_fusion_scan_data           lux_fusion_scan_2204;
+                    ros_ibeo_lux::lux_fusion_scan_data_2204           lux_fusion_scan_2204;
                     ros_ibeo_lux::ethernet_raw_tx      eth0_raw_msg;
 
                     //publish the point cloud

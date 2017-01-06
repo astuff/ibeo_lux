@@ -18,21 +18,22 @@ find_package(catkin REQUIRED COMPONENTS
 ## Declare ROS messages and services
 add_message_files(DIRECTORY msg FILES
         # Tcp/Ip Tx
-        lux_scan_data.msg
         scan_point.msg
-        lux_object_data.msg
         object_list.msg
         point2D.msg
         resolution.msg
         size2D.msg
         float2D.msg
-        lux_vehicle_state.msg
         test_point.msg
         lux_header.msg
-        lux_error_warning.msg
-        lux_fusion_scan_data.msg
+        mount_position.msg
         lux_fusion_scan_info.msg
         lux_fusion_scan_point.msg
+        lux_scan_data_2202.msg
+        lux_object_data_2221.msg
+        lux_vehicle_state_2805.msg
+        lux_error_warning_2030.msg
+        lux_fusion_scan_data_2204.msg
         lux_fusion_scan_info_2205.msg
         lux_fusion_scan_data_2205.msg
         lux_fusion_object_data_2225.msg
@@ -40,7 +41,6 @@ add_message_files(DIRECTORY msg FILES
         lux_fusion_object_data_2280.msg
         object_list_2280.msg
         lux_fusion_img_2403.msg
-        mount_position.msg
         lux_fusion_vehicle_state.msg
         ethernet_raw_tx.msg
         )
