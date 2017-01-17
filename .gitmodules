@@ -1,0 +1,3 @@
+[submodule "core_ibeo_lux"]
+	path = core_ibeo_lux
+	url = git@bitbucket.org:autonomoustuff/core_ibeo_lux.git
