@@ -1,4 +1,4 @@
 # size2D msg for Lux
 
-uint16  x
-uint16  y
+float32  x
+float32  y

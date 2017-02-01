@@ -1,4 +1,5 @@
-lux_header    header
+#Data Type 0x2403
+LuxHeader    header
 
 #Ibeo Fusion image 2403
 
@@ -6,7 +7,7 @@ uint16            image_format
 uint32            time_stamp            # microseconds
 uint64            time_stamp_ntp
 uint8             ID
-mount_position    mouting_position
+MountPosition    mounting_position
 float64           horizontal_opening_angle
 float64           vertical_opening_angle
 uint16            image_width

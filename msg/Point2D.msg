@@ -1,4 +1,4 @@
 # point2D msg for Lux
 
-int16  x
-int16  y
+float32  x
+float32  y

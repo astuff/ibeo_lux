@@ -17,43 +17,39 @@
 // Sys
 #include <std_msgs/String.h>
 #include <csignal>
-#include <boost/program_options.hpp>
-#include <boost/asio.hpp>
 
-#include <as_ibeo_lux.hpp>
+#include <core_ibeo_lux.h>
+#include <network_interface.h>
 
 //Ros
 #include <ros/ros.h>
 #include <pcl_ros/point_cloud.h>
-
-
+#include <tf/transform_datatypes.h>
 
 //Tx
-#include <ros_ibeo_lux/point2D.h>
-#include <ros_ibeo_lux/size2D.h>
-#include <ros_ibeo_lux/float2D.h>
-#include <ros_ibeo_lux/test_point.h>
-#include <ros_ibeo_lux/lux_header.h>
-#include <ros_ibeo_lux/scan_point.h>
-#include <ros_ibeo_lux/resolution.h>
-#include <ros_ibeo_lux/mount_position.h>
-#include <ros_ibeo_lux/lux_fusion_scan_info.h>
-#include <ros_ibeo_lux/lux_fusion_scan_point.h>
-#include <ros_ibeo_lux/lux_scan_data_2202.h>
-#include <ros_ibeo_lux/lux_object_data_2221.h>
-#include <ros_ibeo_lux/lux_vehicle_state_2805.h>
-#include <ros_ibeo_lux/lux_error_warning_2030.h>
-#include <ros_ibeo_lux/lux_fusion_scan_data_2204.h>
-#include <ros_ibeo_lux/lux_fusion_scan_data_2205.h>
-#include <ros_ibeo_lux/lux_fusion_scan_info_2205.h>
-#include <ros_ibeo_lux/lux_fusion_object_data_2225.h>
-#include <ros_ibeo_lux/object_list_2225.h>
-#include <ros_ibeo_lux/lux_fusion_object_data_2280.h>
-#include <ros_ibeo_lux/object_list_2280.h>
-#include <ros_ibeo_lux/lux_fusion_img_2403.h>
-#include <ros_ibeo_lux/lux_fusion_vehicle_state.h>
-#include <ros_ibeo_lux/ethernet_raw_tx.h>
+#include <network_interface/TCPFrame.h>
 
+#include <ibeo_lux_driver/LuxHeader.h>
+// single lux
+#include <ibeo_lux_driver/LuxErrorWarning.h>
+#include <ibeo_lux_driver/LuxObject.h>
+#include <ibeo_lux_driver/LuxObjectData.h>
+#include <ibeo_lux_driver/LuxVehicleState.h>
+#include <ibeo_lux_driver/LuxScanData.h>
+
+#include <ibeo_lux_driver/FusionScanData2204.h>
+#include <ibeo_lux_driver/FusionScanInfo2204.h>
+#include <ibeo_lux_driver/FusionScanData2205.h>
+#include <ibeo_lux_driver/FusionScanInfo2205.h>
+#include <ibeo_lux_driver/FusionScanPoint.h>
+#include <ibeo_lux_driver/FusionObjectData2225.h>
+#include <ibeo_lux_driver/FusionObject2225.h>
+#include <ibeo_lux_driver/FusionObjectData2280.h>
+#include <ibeo_lux_driver/FusionObject2280.h>
+#include <ibeo_lux_driver/FusionImage.h>
+#include <ibeo_lux_driver/FusionVehicleState2806.h>
+#include <ibeo_lux_driver/FusionVehicleState2807.h>
+// supplemental objects/messages
 
 #include <geometry_msgs/Point.h>
 #include <sensor_msgs/PointCloud.h>
@@ -61,38 +57,63 @@
 
 
 using namespace std;
-using namespace boost;
-using boost::asio::ip::tcp;
-namespace po = boost::program_options;
+using namespace AS::Network;
+
+TCPInterface tcp_interface;
 
 // Main routine
 int main(int argc, char **argv)
 {
     //int c;
-    string ip = "192.168.0.1";
-    unsigned long port = 12002;
+    string ip_address = "192.168.0.1";
+    int port = 12002;
     string frame_id = "ibeo_lux";
 
-
     // ROS initialization
-    ros::init(argc, argv, "ros_ibeo_lux");
+    ros::init(argc, argv, "ibeo_lux_driver");
     ros::NodeHandle n;
     ros::NodeHandle priv("~");
     ros::Rate loop_rate(1.0/0.01);
+    bool exit = false;
+    if (priv.getParam("ip_address", ip_address))
+    {
+      ROS_INFO("Got ip_address: %s", ip_address.c_str());
+      if (ip_address == "" )
+      {
+       ROS_ERROR("IP Address Invalid");
+       exit = true;
+      }
+    }
+    if (priv.getParam("port", port))
+    {
+      ROS_INFO("Got port: %d", port);
+      if (port < 0)
+      {
+       ROS_ERROR("Port Invalid");
+       exit = true;
+      }
+    }
+    if (priv.getParam("sensor_frame_id", frame_id))
+    {
+      ROS_INFO("Got sensor frame ID: %s", frame_id.c_str());
+    }
+    if(exit)
+      return 0;
 
     // Advertise messages to send
-    ros::Publisher eth0_raw_tx_pub = n.advertise<ros_ibeo_lux::ethernet_raw_tx>("eth0_raw_tx", 1);
-    ros::Publisher scan_data_pub = n.advertise<ros_ibeo_lux::lux_scan_data_2202>("lux_scan_data_2202", 1);
-    ros::Publisher object_data_pub = n.advertise<ros_ibeo_lux::lux_object_data_2221>("lux_object_data_2221", 1);
-    ros::Publisher vehicle_state_pub = n.advertise<ros_ibeo_lux::lux_vehicle_state_2805>("lux_vehicle_state_2805", 1);
-    ros::Publisher error_warn_pub = n.advertise<ros_ibeo_lux::lux_error_warning_2030>("lux_error_warning_2030", 1);
-    ros::Publisher fusion_scan_2204_pub = n.advertise<ros_ibeo_lux::lux_fusion_scan_data_2204>("lux_fusion_scan_2204", 1);
-    ros::Publisher fusion_scan_2205_pub = n.advertise<ros_ibeo_lux::lux_fusion_scan_data_2205>("lux_fusion_scan_2205", 1);
-    ros::Publisher fusion_object_2225_pub = n.advertise<ros_ibeo_lux::lux_fusion_object_data_2225>("lux_fusion_object_2225", 1);
-    ros::Publisher fusion_object_2280_pub = n.advertise<ros_ibeo_lux::lux_fusion_object_data_2280>("lux_fusion_object_2280", 1);
-    ros::Publisher fusion_img_2403_pub = n.advertise<ros_ibeo_lux::lux_fusion_img_2403>("lux_fusion_img_2403", 1);
-    ros::Publisher fusion_vehicle_2806_pub = n.advertise<ros_ibeo_lux::lux_fusion_vehicle_state>("lux_fusion_vehicle_state_2806", 1);
-    ros::Publisher fusion_vehicle_2807_pub = n.advertise<ros_ibeo_lux::lux_fusion_vehicle_state>("lux_fusion_vehicle_state_2807", 1);
+    ros::Publisher raw_tcp_pub = n.advertise<network_interface::TCPFrame>("raw_tcp_tx", 1);
+
+    ros::Publisher scan_data_pub = n.advertise<ibeo_lux_driver::LuxScanData>("lux_scan_data", 1);
+    ros::Publisher object_data_pub = n.advertise<ibeo_lux_driver::LuxObjectData>("lux_object_data", 1);
+    ros::Publisher vehicle_state_pub = n.advertise<ibeo_lux_driver::LuxVehicleState>("lux_vehicle_state", 1);
+    ros::Publisher error_warn_pub = n.advertise<ibeo_lux_driver::LuxErrorWarning>("lux_error_warning", 1);
+    ros::Publisher fusion_scan_2204_pub = n.advertise<ibeo_lux_driver::FusionScanData2204>("fusion_scan_data_2204", 1);
+    ros::Publisher fusion_scan_2205_pub = n.advertise<ibeo_lux_driver::FusionScanData2205>("fusion_scan_data_2205", 1);
+    ros::Publisher fusion_object_2225_pub = n.advertise<ibeo_lux_driver::FusionObjectData2225>("fusion_object_data_2225", 1);
+    ros::Publisher fusion_object_2280_pub = n.advertise<ibeo_lux_driver::FusionObjectData2280>("fusion_object_data_2280", 1);
+    ros::Publisher fusion_img_2403_pub = n.advertise<ibeo_lux_driver::FusionImage>("fusion_image_2403", 1);
+    ros::Publisher fusion_vehicle_2806_pub = n.advertise<ibeo_lux_driver::FusionVehicleState2806>("lux_fusion_vehicle_state_2806", 1);
+    ros::Publisher fusion_vehicle_2807_pub = n.advertise<ibeo_lux_driver::FusionVehicleState2807>("lux_fusion_vehicle_state_2807", 1);
 
     // publish the visualization data
     ros::Publisher scan_pointcloud_2202_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("lux_point_cloud_2202", 1);
@@ -107,1414 +128,944 @@ int main(int argc, char **argv)
     // Wait for time to be valid
     while (ros::Time::now().nsec == 0);
 
-    ros_ibeo_lux::lux_header           lux_header_msg;
-    TCPMsg    header_msg;
+    ibeo_lux_driver::LuxHeader lux_header_msg;
+    ibeo_lux_driver::LuxScanData lux_scan_msg;
+    ibeo_lux_driver::LuxObjectData lux_object_msg;
+    ibeo_lux_driver::LuxVehicleState lux_vehicle_state_msg;
+    ibeo_lux_driver::LuxErrorWarning lux_error_warning_msg;
+    ibeo_lux_driver::FusionScanData2204 lux_fusion_scan_2204;
+    ibeo_lux_driver::FusionScanData2205 lux_fusion_scan_2205;
+    ibeo_lux_driver::FusionObjectData2225 lux_fusion_object_2225;
+    ibeo_lux_driver::FusionObjectData2280 lux_fusion_object_2280;
+    ibeo_lux_driver::FusionImage lux_fusion_image_msg;
+    ibeo_lux_driver::FusionVehicleState2806 lux_vehicle_state_2806_msg;
+    ibeo_lux_driver::FusionVehicleState2807 lux_vehicle_state_2807_msg;
+    
+    network_interface::TCPFrame tcp_raw_msg;
 
-    int    data_size;
-    int    data_type;
-    int    start_byte;
-    int    device_id;
-    char   data_type_hex[10];
+    LuxHeader_TX_Message header_tx;
+    LuxScanData_TX_Message lux_scan_data_tx;
+    LuxObjectData_TX_Message lux_object_data_tx;
+    LuxVehicleState_TX_Message lux_vehicle_state_tx;
+    LuxErrorWarning_TX_Message lux_error_warning_tx;
+    FusionScanData2204_TX_Message fusion_scan_data_2204_tx;
+    FusionScanData2205_TX_Message fusion_scan_data_2205_tx;
+    FusionObjectData2225_TX_Message fusion_object_data_2225_tx;
+    FusionObjectData2280_TX_Message fusion_object_data_2280_tx;
+    FusionImage_TX_Message fusion_image_tx;
+    FusionVehicleState2806_TX_Message fusion_vehicle_state_2806_tx;
+    FusionVehicleState2807_TX_Message fusion_vehicle_state_2807_tx;
+    return_statuses status = tcp_interface.open(ip_address.c_str(), port);
+    if(status == return_statuses::ok)
+    {
+      ROS_INFO("LUX connected");
+      // Loop as long as module should run
+      
+      unsigned char head_msg[LUX_HEADER_SIZE]; 
 
-    stringstream sPort;
-    sPort << port;
-
-
-    asio::io_service io;
-    tcp::resolver res(io);
-    tcp::resolver::query query(tcp::v4(), ip.c_str(), sPort.str());
-    tcp::resolver::iterator it = res.resolve(query);
-    tcp::socket socket(io);
-
-    try {
-        socket.connect(*it);
-        ROS_INFO("LUX connected");
-        // Loop as long as module should run
-        while (ros::ok())
+      while (ros::ok())
+      {
+        // Get current time
+        ros::Time now = ros::Time::now();
+        status = tcp_interface.read_exactly(head_msg, sizeof(head_msg), LUX_HEADER_SIZE);
+        int offset = header_tx.parse(head_msg);
+        if(offset > 0)
         {
-            // Get current time
-            ros::Time now = ros::Time::now();
-            //double nowSec = now.toSec();
-
-            std::array<unsigned char, LUX_PAYLOAD_SIZE> msgBuf;
-            system::error_code error;
-            unsigned long first_four_bytes;
-
-            //memset(&msgBuf[0],0,LUX_PAYLOAD_SIZE);
-
-            int rcvSize = socket.read_some(asio::buffer(msgBuf), error);
-
-            bool package_rcvd = false;
-            int i = 0;
-            while (!package_rcvd)
-            {
-                header_msg.msgOffset = i;
-                header_msg.size = 4;
-                header_msg.factor = 1;
-                header_msg.valueOffset = 0;
-
-                first_four_bytes = (uint32_t)read_big_endian(msgBuf, header_msg);
-                if (first_four_bytes == magicWord)
-                {
-                    //ROS_INFO("Found the header msg");
-
-                    header_msg.msgOffset = 8;
-                    data_size = (uint32_t)read_big_endian(msgBuf, header_msg);
-                    header_msg.msgOffset = 13;
-                    device_id = (uint8_t)read_big_endian(msgBuf, header_msg);
-                    header_msg.msgOffset = 14;
-                    header_msg.size = 2;
-                    data_type = (uint16_t)read_big_endian(msgBuf, header_msg);
-                    start_byte = i;
-                    package_rcvd = true;
-                    sprintf(data_type_hex, "%x", data_type);
-
-                    ROS_INFO("Found Data Type %x", data_type);
-
-                    lux_header_msg.header.stamp = now;
-                    lux_header_msg.header.frame_id = frame_id;
-                    lux_header_msg.message_size = data_size;
-                    lux_header_msg.device_id = device_id;
-                    lux_header_msg.data_type = data_type_hex;
-
-                }
-                i = i+1;
-            }
-
-            if (package_rcvd)
-            {
-                //int count = 0;
-                // ibeo LUX scan data
-                start_byte = start_byte + LUX_MESSAGE_DATA_OFFSET;
-                if (data_type == 0x2202)
-                {
-                    ROS_INFO("reading scan data 0x2202");
-                    TCPMsg   scan_data;
-                    ros_ibeo_lux::lux_scan_data_2202        lux_scan_msg;
-                    ros_ibeo_lux::ethernet_raw_tx      eth0_raw_msg;
-
-                    //publish the point cloud
-                    //sensor_msgs::PointCloud2  point_cloud_msg;
-                    pcl::PointCloud <pcl::PointXYZL> pcl_cloud_2202;
-                    pcl::PointXYZL cloud_point_2202;
-
-                    scan_data.size = 2;
-                    scan_data.msgOffset = start_byte;
-                    scan_data.factor = 1;
-                    scan_data.valueOffset = 0;
-                    lux_scan_msg.scan_number = (uint16_t)read_little_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte + 2;
-                    lux_scan_msg.scan_status = (uint16_t)read_little_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte  + 4;
-                    lux_scan_msg.sync_phase_offset = (uint16_t)read_little_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte  + 6;
-                    scan_data.size = 8;
-                    lux_scan_msg.scan_start_time = (uint64_t)read_little_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte  + 14;
-                    lux_scan_msg.scan_end_time = (uint64_t)read_little_endian(msgBuf, scan_data);
-                    scan_data.size = 2;
-                    scan_data.msgOffset = start_byte  + 22;
-                    lux_scan_msg.angle_ticks = (uint16_t)read_little_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte + 24;
-                    lux_scan_msg.start_angle = (int16_t)read_little_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte + 26;
-                    lux_scan_msg.end_angle = (int16_t)read_little_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte + 28;
-                    lux_scan_msg.num_scan_pts = (uint16_t)read_little_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte + 30;
-                    lux_scan_msg.mounting_yaw_angle = (int16_t)read_little_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte + 32;
-                    lux_scan_msg.mounting_pitch_angle = (int16_t)read_little_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte + 34;
-                    lux_scan_msg.mounting_roll_angle = (int16_t)read_little_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte + 36;
-                    lux_scan_msg.mounting_position_x = (int16_t)read_little_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte + 38;
-                    lux_scan_msg.mounting_position_y = (int16_t)read_little_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte + 40;
-                    lux_scan_msg.mounting_position_z = (int16_t)read_little_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte + 42;
-                    lux_scan_msg.scan_flags = (int16_t)read_little_endian(msgBuf, scan_data);
-
-                    pcl_cloud_2202.reserve(lux_scan_msg.num_scan_pts);
-
-                    ros_ibeo_lux::scan_point scan_point_data;
-                    //scan_data.msgOffset = start_byte + 44;
-                    int    pt_start_byte = start_byte + 44;
-                    //scan_data.msgOffset = pt_start_byte;
-                    //scan_data.size = 1;
-                    for(int k = 0; k < lux_scan_msg.num_scan_pts; k++)
-                    {
-                        scan_data.size = 1;
-                        scan_data.msgOffset = pt_start_byte;
-                        scan_point_data.layer = (uint8_t)(read_one_byte(msgBuf,scan_data.msgOffset) & 0x0F);
-                        scan_point_data.echo = (uint8_t)((read_one_byte(msgBuf,scan_data.msgOffset) >> 4) & 0x0F);
-                        scan_data.msgOffset = pt_start_byte + 1;
-                        scan_point_data.flags = (uint8_t)read_one_byte(msgBuf, scan_data.msgOffset);
-                        scan_data.msgOffset = pt_start_byte + 2;
-                        scan_data.size = 2;
-                        scan_point_data.horizontal_angle = (int16_t)read_little_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = pt_start_byte + 4;
-                        scan_point_data.radial_distance = (uint16_t)read_little_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = pt_start_byte + 6;
-                        scan_point_data.echo_pulse_width = (uint16_t)read_little_endian(msgBuf, scan_data);
-                        pt_start_byte = pt_start_byte + 10;
-                        //scan_data.msgOffset = pt_start_byte;
-                        lux_scan_msg.scan_points.push_back(scan_point_data);
-                        //point cloud
-                        cloud_point_2202.label = scan_point_data.flags;
-                        double phi;
-                        switch (scan_point_data.layer)
-                        {
-                            case 0: phi = -1.6 * PI / 180.0; break;
-                            case 1: phi = -0.8 * PI / 180.0; break;
-                            case 2: phi =  0.8 * PI / 180.0; break;
-                            case 3: phi =  1.6 * PI / 180.0; break;
-                            default: phi = 0.0; break;
-                        }
-
-                        cloud_point_2202.x = 0.01*(double)scan_point_data.radial_distance*cos(convertAngle(scan_point_data.horizontal_angle,lux_scan_msg.angle_ticks))*cos(phi);
-                        cloud_point_2202.y = 0.01*(double)scan_point_data.radial_distance*sin(convertAngle(scan_point_data.horizontal_angle,lux_scan_msg.angle_ticks))*cos(phi);
-                        cloud_point_2202.z = 0.01*(double)scan_point_data.radial_distance*sin(phi);
-
-                        pcl_cloud_2202.points.push_back(cloud_point_2202);
-
-                    }
-
-                    lux_scan_msg.header = lux_header_msg;
-                    scan_data_pub.publish(lux_scan_msg);
-                    lux_scan_msg.scan_points.clear();
-
-                    //pcl_cloud.header.stamp = now;
-                    pcl_cloud_2202.header.frame_id = frame_id;
-                    scan_pointcloud_2202_pub.publish(pcl_cloud_2202);
-
-                    eth0_raw_msg.data_type = data_type_hex;
-                    eth0_raw_msg.data_size = data_size;
-
-                    for(int eth_i = 0; eth_i < data_size; eth_i++)
-                    {
-                        eth0_raw_msg.data.push_back(msgBuf[eth_i]);
-                    }
-                    eth0_raw_tx_pub.publish(eth0_raw_msg);
-
-                }
-
-
-                // ibeo LUX object data
-                if (data_type == 0x2221)
-                {
-                    ROS_INFO("reading object data 0x2221");
-                    TCPMsg   object_data;
-                    ros_ibeo_lux::lux_object_data_2221      lux_object_msg;
-                    visualization_msgs::MarkerArray   object_markers;
-                    ros_ibeo_lux::ethernet_raw_tx      eth0_raw_msg;
-
-                    //ros::Duration lifetime(0.1);
-
-                    object_data.size = 8;
-                    object_data.msgOffset = start_byte;
-                    object_data.factor = 1;
-                    object_data.valueOffset = 0;
-                    lux_object_msg.scan_start_time = (uint64_t)read_little_endian(msgBuf, object_data);
-                    object_data.msgOffset = start_byte + 8;
-                    object_data.size = 2;
-                    lux_object_msg.num_of_objects = (uint16_t)read_little_endian(msgBuf, object_data);
-
-                    ros_ibeo_lux::object_list scan_object;
-                    ros_ibeo_lux::point2D     object_point;
-                    int    object_start_byte = start_byte + 10;
-
-                    for(int k = 0; k < lux_object_msg.num_of_objects; k++)
-                    {
-                        object_data.msgOffset = object_start_byte;
-                        object_data.size = 2;
-                        scan_object.ID = (uint16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 2;
-                        scan_object.age = (uint16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 4;
-                        scan_object.prediction_age = (uint16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 6;
-                        scan_object.relative_timestamp = (uint16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 8;
-                        scan_object.reference_point.x = (int16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 10;
-                        scan_object.reference_point.y = (int16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 12;
-                        scan_object.reference_point_sigma.x = (int16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 14;
-                        scan_object.reference_point_sigma.y = (int16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 16;
-                        scan_object.closest_point.x = (int16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 18;
-                        scan_object.closest_point.y = (int16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 20;
-                        scan_object.bounding_box_center.x = (int16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 22;
-                        scan_object.bounding_box_center.y = (int16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 24;
-                        scan_object.bounding_box_width = (uint16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 26;
-                        scan_object.bounding_box_length = (uint16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 28;
-                        scan_object.object_box_center.x = (int16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 30;
-                        scan_object.object_box_center.y = (int16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 32;
-                        scan_object.object_box_size.x = (uint16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 34;
-                        scan_object.object_box_size.y = (uint16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 36;
-                        scan_object.object_box_orientation = (int16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 38;
-                        scan_object.absolute_velocity.x = (int16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 40;
-                        scan_object.absolute_velocity.y = (int16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 42;
-                        scan_object.absolute_velocity_sigma.x = (uint16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 44;
-                        scan_object.absolute_velocity_sigma.y = (uint16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 46;
-                        scan_object.relative_velocity.x = (int16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 48;
-                        scan_object.relative_velocity.y = (int16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 50;
-                        scan_object.classification = (uint16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 52;
-                        scan_object.classification_age = (uint16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 54;
-                        scan_object.classification_certaiinty = (uint16_t)read_little_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 56;
-                        scan_object.number_of_contour_points = (uint16_t)read_little_endian(msgBuf, object_data);
-
-                        visualization_msgs::Marker   object_marker;
-                        object_marker.header.frame_id = frame_id;
-                        object_marker.header.stamp = now;
-                        object_marker.id  = scan_object.ID;
-                        object_marker.ns = "object_contour_2221";
-                        object_marker.type = visualization_msgs::Marker::LINE_STRIP;
-                        object_marker.action = visualization_msgs::Marker::ADD;
-                        object_marker.scale.x = object_marker.scale.y = object_marker.scale.z = 0.01;
-                        object_marker.lifetime = ros::Duration(1.0);
-                        object_marker.color.a = 0.5;
-                        object_marker.color.r = object_marker.color.g = object_marker.color.b = 1.0;
-                        object_marker.frame_locked = false;
-
-                        std::string   label;
-                        switch (scan_object.classification)
-                        {
-                            case 0:
-                                label = "Unclassified";
-                                // Unclassified - white
-                                break;
-                            case 1:
-                                label = "Unknown Small";
-                                // Unknown small - blue
-                                object_marker.color.r = object_marker.color.g = 0;
-                                break;
-                            case 2:
-                                label = "Unknown Big";
-                                // Unknown big - dark blue
-                                object_marker.color.r = object_marker.color.g = 0;
-                                object_marker.color.b = 0.5;
-                                break;
-                            case 3:
-                                label = "Pedestrian";
-                                // Pedestrian - red
-                                object_marker.color.g = object_marker.color.b = 0;
-                                break;
-                            case 4:
-                                label = "Bike";
-                                // Bike - dark red
-                                object_marker.color.g = object_marker.color.b = 0;
-                                object_marker.color.r = 0.5;
-                                break;
-                            case 5:
-                                label = "Car";
-                                // Car - green
-                                object_marker.color.b = object_marker.color.r = 0;
-                                break;
-                            case 6:
-                                label = "Truck";
-                                // Truck - dark gree
-                                object_marker.color.b = object_marker.color.r = 0;
-                                object_marker.color.g = 0.5;
-                                break;
-                            case 12:
-                                label = "Under drivable";
-                                // Under drivable - grey
-                                object_marker.color.r = object_marker.color.b = object_marker.color.g = 0.7;
-                                break;
-                            case 13:
-                                label = "Over drivable";
-                                // Over drivable - dark grey
-                                object_marker.color.r = object_marker.color.b = object_marker.color.g = 0.4;
-                                break;
-                            default:
-                                label = "Unknown";
-                                object_marker.color.r = object_marker.color.b = object_marker.color.g = 0.0;
-                                break;
-                        }
-
-                        int    pt_start_byte = object_start_byte + 58;
-
-                        for(int j =0; j< scan_object.number_of_contour_points; j++)
-                        {
-                            object_data.msgOffset = pt_start_byte;
-                            object_point.x = (int16_t)read_little_endian(msgBuf, object_data);
-                            object_data.msgOffset = pt_start_byte + 2;
-                            object_point.y = (int16_t)read_little_endian(msgBuf, object_data);
-                            scan_object.list_of_contour_points.push_back(object_point);
-                            object_data.msgOffset = pt_start_byte + 4;
-                            pt_start_byte = pt_start_byte + 4;
-
-                            geometry_msgs::Point    dis_object_point;
-                            dis_object_point.x = 0.01*object_point.x;
-                            dis_object_point.y = 0.01*object_point.y;
-                            object_marker.points.push_back(dis_object_point);
-                            visualization_msgs::Marker      object_point_marker;
-                            geometry_msgs::Pose     object_point_pose;
-                            object_point_pose.position.x = 0.01*object_point.x;
-                            object_point_pose.position.y = 0.01*object_point.y;
-                            object_point_pose.position.z = 0;
-                            geometry_msgs::Vector3   object_scale;
-                            std_msgs::ColorRGBA      object_color;
-                            object_scale.x = 1;
-                            object_scale.y = 1;
-                            object_scale.z = 1;
-                            object_color.r = 0;
-                            object_color.g = 1.0;
-                            object_color.b = 0;
-                            object_color.a = 1.0;
-
-                            object_point_marker.header.stamp = now;
-                            object_point_marker.header.frame_id = frame_id;
-                            object_point_marker.type = visualization_msgs::Marker::SPHERE;
-                            object_point_marker.action = visualization_msgs::Marker::ADD;
-                            object_point_marker.ns = "object_2221";
-                            object_point_marker.pose = object_point_pose;
-                            object_point_marker.scale = object_scale;
-                            object_point_marker.color = object_color;
-                            object_point_marker.lifetime = ros::Duration(1.0);
-                            object_point_marker.frame_locked = false;
-
-                            object_marker_2221_pub.publish(object_point_marker);
-                        }
-                        object_start_byte = object_start_byte + 58 + 4*scan_object.number_of_contour_points;
-
-                        object_markers.markers.push_back(object_marker);
-                        lux_object_msg.object.push_back(scan_object);
-                        scan_object.list_of_contour_points.clear();
-                    }
-                    lux_object_msg.header = lux_header_msg;
-                    object_data_pub.publish(lux_object_msg);
-                    object_markers_2221_pub.publish(object_markers);
-                    lux_object_msg.object.clear();
-
-                    eth0_raw_msg.data_type = data_type_hex;
-                    eth0_raw_msg.data_size = data_size;
-
-                    for(int eth_i = 0; eth_i < data_size; eth_i++)
-                    {
-                        eth0_raw_msg.data.push_back(msgBuf[eth_i]);
-                    }
-                    eth0_raw_tx_pub.publish(eth0_raw_msg);
-                }
-
-                //vehicle state 2805
-                if (data_type == 0x2805)
-                {
-                    ROS_INFO("reading vehicle state data 0x2805");
-                    TCPMsg   vehicle_state_data;
-                    ros_ibeo_lux::lux_vehicle_state_2805    lux_vehicle_state_msg;
-                    ros_ibeo_lux::ethernet_raw_tx      eth0_raw_msg;
-
-                    vehicle_state_data.size = 8;
-                    vehicle_state_data.msgOffset = start_byte;
-                    vehicle_state_data.factor = 1;
-                    vehicle_state_data.valueOffset = 0;
-                    lux_vehicle_state_msg.timestamp = (uint64_t)read_little_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.size = 2;
-                    vehicle_state_data.msgOffset = start_byte + 8;
-                    lux_vehicle_state_msg.scan_number = (uint16_t)read_little_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 10;
-                    lux_vehicle_state_msg.error_flags = (uint16_t)read_little_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 12;
-                    lux_vehicle_state_msg.longitudinal_velocity = (int16_t)read_little_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 14;
-                    lux_vehicle_state_msg.steering_wheel_angle = (int16_t)read_little_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 16;
-                    lux_vehicle_state_msg.front_wheel_angle = (int16_t)read_little_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 20;
-                    vehicle_state_data.size = 4;
-                    lux_vehicle_state_msg.vehicle_x = (int32_t)read_little_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 24;
-                    lux_vehicle_state_msg.vehicle_y = (int32_t)read_little_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 28;
-                    vehicle_state_data.size = 2;
-                    lux_vehicle_state_msg.course_angle = (int16_t)read_little_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 30;
-                    lux_vehicle_state_msg.time_difference = (uint16_t)read_little_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 32;
-                    lux_vehicle_state_msg.diff_in_x = (int16_t)read_little_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 34;
-                    lux_vehicle_state_msg.diff_in_y = (int16_t)read_little_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 36;
-                    lux_vehicle_state_msg.diff_in_heading = (int16_t)read_little_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 40;
-                    lux_vehicle_state_msg.current_yaw_rate = (int16_t)read_little_endian(msgBuf, vehicle_state_data);
-
-                    lux_vehicle_state_msg.header  = lux_header_msg;
-                    vehicle_state_pub.publish(lux_vehicle_state_msg);
-
-                    eth0_raw_msg.data_type = data_type_hex;
-                    eth0_raw_msg.data_size = data_size;
-
-                    for(int eth_i = 0; eth_i < data_size; eth_i++)
-                    {
-                        eth0_raw_msg.data.push_back(msgBuf[eth_i]);
-                    }
-                    eth0_raw_tx_pub.publish(eth0_raw_msg);
-
-                }
-                // error and warning
-                if (data_type == 0x2030)
-                {
-                    ROS_INFO("reading lux errors and warnings data 0x2030");
-                    TCPMsg   error_warn_data;
-                    ros_ibeo_lux::lux_error_warning_2030    lux_error_warning_msg;
-                    ros_ibeo_lux::ethernet_raw_tx      eth0_raw_msg;
-
-                    char     temp_value_string[10];
-                    error_warn_data.size = 2;
-                    error_warn_data.msgOffset = start_byte;
-                    error_warn_data.factor = 1;
-                    error_warn_data.valueOffset = 0;
-                    sprintf(temp_value_string,"%x",(uint16_t)read_little_endian(msgBuf, error_warn_data));
-                    lux_error_warning_msg.error_register1 = temp_value_string;
-                    error_warn_data.msgOffset = start_byte + 2;
-                    sprintf(temp_value_string,"%x",(uint16_t)read_little_endian(msgBuf, error_warn_data));
-                    lux_error_warning_msg.error_register2 = temp_value_string;
-                    error_warn_data.msgOffset = start_byte + 4;
-                    sprintf(temp_value_string,"%x",(uint16_t)read_little_endian(msgBuf, error_warn_data));
-                    lux_error_warning_msg.warning_register1 = temp_value_string;
-                    error_warn_data.msgOffset = start_byte + 6;
-                    sprintf(temp_value_string,"%x",(uint16_t)read_little_endian(msgBuf, error_warn_data));
-                    lux_error_warning_msg.warning_register2 = temp_value_string;
-
-                    lux_error_warning_msg.header  = lux_header_msg;
-                    error_warn_pub.publish(lux_error_warning_msg);
-
-                    eth0_raw_msg.data_type = data_type_hex;
-                    eth0_raw_msg.data_size = data_size;
-
-                    for(int eth_i = 0; eth_i < data_size; eth_i++)
-                    {
-                        eth0_raw_msg.data.push_back(msgBuf[eth_i]);
-                    }
-                    eth0_raw_tx_pub.publish(eth0_raw_msg);
-                }
-                // Fusion scan data 2204
-                if (data_type == 0x2204)
-                {
-                    ROS_INFO("reading FUSION SYSTEM/ECU scan data 0x2204");
-                    TCPMsg   scan_data;
-                    ros_ibeo_lux::lux_fusion_scan_data_2204           lux_fusion_scan_2204;
-                    ros_ibeo_lux::ethernet_raw_tx      eth0_raw_msg;
-
-                    //publish the point cloud
-                    pcl::PointCloud <pcl::PointXYZL> pcl_cloud_2204;
-                    pcl::PointXYZL cloud_point_2204;
-
-                    scan_data.size = 8;
-                    scan_data.msgOffset = start_byte;
-                    scan_data.factor = 1;
-                    scan_data.valueOffset = 0;
-
-                    lux_fusion_scan_2204.scan_start_time = (uint64_t)read_big_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte + 8;
-                    scan_data.size = 4;
-                    lux_fusion_scan_2204.scan_end_time_offset = (uint32_t)read_big_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte  + 12;
-                    lux_fusion_scan_2204.flags = (uint32_t)read_big_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte  + 16;
-                    scan_data.size = 2;
-                    lux_fusion_scan_2204.scan_number = (uint16_t)read_big_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte  + 18;
-                    lux_fusion_scan_2204.num_scan_pts = (uint16_t)read_big_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte  + 20;
-                    lux_fusion_scan_2204.num_scan_info = (uint8_t)read_one_byte(msgBuf, scan_data.msgOffset);
-
-                    ros_ibeo_lux::lux_fusion_scan_info   scan_info_2204;
-                    ros_ibeo_lux::lux_fusion_scan_point  scan_point_2204;
-
-                    int    info_start_byte = start_byte + 24;
-                    //scan_data.msgOffset = pt_start_byte;
-
-                    for(int k = 0; k < lux_fusion_scan_2204.num_scan_info; k++)
-                    {
-                        //scan_data.msgOffset = scan_data.msgOffset + 10*k;
-                        scan_info_2204.device_id = (uint8_t)read_one_byte(msgBuf, info_start_byte);
-                        scan_info_2204.type = (uint8_t)read_one_byte(msgBuf, info_start_byte + 1);
-                        scan_data.msgOffset = info_start_byte + 2;
-                        scan_data.size = 2;
-                        scan_info_2204.number = (uint16_t)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 8;
-                        scan_data.size = 4;
-                        scan_info_2204.start_angle = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 12;
-                        scan_info_2204.end_angle = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 16;
-                        scan_info_2204.yaw_angle = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 20;
-                        scan_info_2204.pitch_angle = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 24;
-                        scan_info_2204.roll_angle = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 28;
-                        scan_info_2204.mount_offset_x = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 32;
-                        scan_info_2204.mount_offset_y = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 36;
-                        scan_info_2204.mount_offset_z = (float)read_big_endian(msgBuf, scan_data);
-                        info_start_byte = info_start_byte + 40;
-
-                        lux_fusion_scan_2204.scan_info_list.push_back(scan_info_2204);
-                    }
-
-                    int    pt_start_byte = start_byte + 24 + lux_fusion_scan_2204.num_scan_info *40;
-
-                    pcl_cloud_2204.reserve(lux_fusion_scan_2204.num_scan_pts);
-
-                    for(int k = 0; k < lux_fusion_scan_2204.num_scan_pts; k++)
-                    {
-                        //scan_data.msgOffset = scan_data.msgOffset + 10*k;
-                        scan_data.msgOffset = pt_start_byte;
-                        scan_data.size = 4;
-                        scan_point_2204.x_position = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = pt_start_byte + 4;
-                        scan_point_2204.y_position = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = pt_start_byte + 8;
-                        scan_point_2204.z_position = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = pt_start_byte + 12;
-                        scan_point_2204.echo_width = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = pt_start_byte + 16;
-                        scan_point_2204.device_id = (uint8_t)read_one_byte(msgBuf, scan_data.msgOffset);
-                        scan_data.msgOffset = pt_start_byte + 17;
-                        scan_point_2204.layer = (uint8_t)read_one_byte(msgBuf, scan_data.msgOffset);
-                        scan_data.msgOffset = pt_start_byte + 18;
-                        scan_point_2204.echo = (uint8_t)read_one_byte(msgBuf, scan_data.msgOffset);
-                        scan_data.msgOffset = pt_start_byte + 20;
-                        scan_data.size = 2;
-                        scan_point_2204.time_stamp = (uint32_t)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = pt_start_byte + 24;
-                        scan_data.size = 2;
-                        scan_point_2204.flags = (uint16_t)read_big_endian(msgBuf, scan_data);
-                        pt_start_byte = pt_start_byte + 28;
-
-                        lux_fusion_scan_2204.scan_point_list.push_back(scan_point_2204);
-
-                        cloud_point_2204.label = scan_point_2204.flags;
-                        cloud_point_2204.x = scan_point_2204.x_position;
-                        cloud_point_2204.y = scan_point_2204.y_position;
-                        cloud_point_2204.z = scan_point_2204.z_position;
-                        pcl_cloud_2204.points.push_back(cloud_point_2204);
-                    }
-
-                    lux_fusion_scan_2204.header = lux_header_msg;
-                    fusion_scan_2204_pub.publish(lux_fusion_scan_2204);
-
-                    pcl_cloud_2204.header.frame_id = frame_id;
-                    scan_pointcloud_2204_pub.publish(pcl_cloud_2204);
-
-                    eth0_raw_msg.data_type = data_type_hex;
-                    eth0_raw_msg.data_size = data_size;
-
-                    for(int eth_i = 0; eth_i < data_size; eth_i++)
-                    {
-                        eth0_raw_msg.data.push_back(msgBuf[eth_i]);
-                    }
-                    eth0_raw_tx_pub.publish(eth0_raw_msg);
-                }
-                // Fusion scan data 2205
-                if (data_type == 0x2205)
-                {
-                    ROS_INFO("reading FUSION SYSTEM/ECU scan data 0x2205");
-                    TCPMsg   scan_data;
-                    ros_ibeo_lux::lux_fusion_scan_data_2205      lux_fusion_scan_2205;
-                    ros_ibeo_lux::ethernet_raw_tx      eth0_raw_msg;
-
-                    pcl::PointCloud <pcl::PointXYZL> pcl_cloud_2205;
-                    pcl::PointXYZL cloud_point_2205;
-
-                    scan_data.size = 8;
-                    scan_data.msgOffset = start_byte;
-                    scan_data.factor = 1;
-                    scan_data.valueOffset = 0;
-
-                    lux_fusion_scan_2205.scan_start_time = (uint64_t)read_big_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte + 8;
-                    scan_data.size = 4;
-                    lux_fusion_scan_2205.scan_end_time_offset = (uint32_t)read_big_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte  + 12;
-                    lux_fusion_scan_2205.flags = (uint32_t)read_big_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte  + 16;
-                    scan_data.size = 2;
-                    lux_fusion_scan_2205.scan_number = (uint16_t)read_big_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte  + 18;
-                    lux_fusion_scan_2205.num_scan_pts = (uint16_t)read_big_endian(msgBuf, scan_data);
-                    scan_data.msgOffset = start_byte  + 20;
-                    scan_data.size = 1;
-                    lux_fusion_scan_2205.num_scan_info = (uint8_t)read_one_byte(msgBuf, scan_data.msgOffset);
-
-                    ros_ibeo_lux::lux_fusion_scan_info_2205   scan_info_2205;
-                    ros_ibeo_lux::lux_fusion_scan_point  scan_point_2205;
-
-                    int    info_start_byte = start_byte + 24;
-
-                    for(int k = 0; k < lux_fusion_scan_2205.num_scan_info; k++)
-                    {
-                        //scan_data.msgOffset = scan_data.msgOffset + 10*k;
-                        scan_info_2205.device_id = (uint8_t)read_one_byte(msgBuf, info_start_byte);
-                        scan_info_2205.type = (uint8_t)read_one_byte(msgBuf, info_start_byte + 1);
-                        scan_data.msgOffset = info_start_byte + 2;
-                        scan_data.size = 2;
-                        scan_info_2205.number = (uint16_t)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 8;
-                        scan_data.size = 4;
-                        scan_info_2205.start_angle = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 12;
-                        scan_info_2205.end_angle = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 16;
-                        scan_data.size = 8;
-                        scan_info_2205.scan_start_time = (uint64_t)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 24;
-                        scan_info_2205.scan_end_time = (uint64_t)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 32;
-                        scan_info_2205.device_start_time = (uint64_t)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 40;
-                        scan_info_2205.device_end_time = (uint64_t)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 48;
-                        scan_data.size = 4;
-                        scan_info_2205.scan_frequency = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 52;
-                        scan_info_2205.beam_tilt = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 56;
-                        scan_info_2205.scan_flags = (uint32_t)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 60;
-                        scan_info_2205.yaw_angle = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 64;
-                        scan_info_2205.pitch_angle = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 68;
-                        scan_info_2205.roll_angle = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 72;
-                        scan_info_2205.offset_x = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 76;
-                        scan_info_2205.offset_y = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 80;
-                        scan_info_2205.offset_z = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 84;
-                        scan_info_2205.resolution1.resolution_start_angle = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 88;
-                        scan_info_2205.resolution1.resolution = (float)read_big_endian(msgBuf, scan_data);
-
-                        scan_data.msgOffset = info_start_byte + 92;
-                        scan_info_2205.resolution2.resolution_start_angle = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 96;
-                        scan_info_2205.resolution2.resolution = (float)read_big_endian(msgBuf, scan_data);
-
-                        scan_data.msgOffset = info_start_byte + 100;
-                        scan_info_2205.resolution3.resolution_start_angle = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 104;
-                        scan_info_2205.resolution3.resolution = (float)read_big_endian(msgBuf, scan_data);
-
-                        scan_data.msgOffset = info_start_byte + 108;
-                        scan_info_2205.resolution4.resolution_start_angle = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 112;
-                        scan_info_2205.resolution4.resolution = (float)read_big_endian(msgBuf, scan_data);
-
-                        scan_data.msgOffset = info_start_byte + 116;
-                        scan_info_2205.resolution5.resolution_start_angle = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 120;
-                        scan_info_2205.resolution5.resolution = (float)read_big_endian(msgBuf, scan_data);
-
-                        scan_data.msgOffset = info_start_byte + 124;
-                        scan_info_2205.resolution6.resolution_start_angle = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 128;
-                        scan_info_2205.resolution6.resolution = (float)read_big_endian(msgBuf, scan_data);
-
-                        scan_data.msgOffset = info_start_byte + 132;
-                        scan_info_2205.resolution7.resolution_start_angle = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 136;
-                        scan_info_2205.resolution7.resolution = (float)read_big_endian(msgBuf, scan_data);
-
-                        scan_data.msgOffset = info_start_byte + 140;
-                        scan_info_2205.resolution8.resolution_start_angle = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = info_start_byte + 144;
-                        scan_info_2205.resolution8.resolution = (float)read_big_endian(msgBuf, scan_data);
-
-
-                        info_start_byte = info_start_byte + 148;
-
-                        lux_fusion_scan_2205.scan_info_list.push_back(scan_info_2205);
-                    }
-
-                    int    pt_start_byte = start_byte + 24 + lux_fusion_scan_2205.num_scan_info *148;
-                    pcl_cloud_2205.reserve(lux_fusion_scan_2205.num_scan_pts);
-
-                    for(int k = 0; k < lux_fusion_scan_2205.num_scan_pts; k++)
-                    {
-                        //scan_data.msgOffset = scan_data.msgOffset + 10*k;
-                        scan_data.msgOffset = pt_start_byte;
-                        scan_data.size = 4;
-                        scan_point_2205.x_position = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = pt_start_byte + 4;
-                        scan_point_2205.y_position = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = pt_start_byte + 8;
-                        scan_point_2205.z_position = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = pt_start_byte + 12;
-                        scan_point_2205.echo_width = (float)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = pt_start_byte + 16;
-                        scan_point_2205.device_id = (uint8_t)read_one_byte(msgBuf, scan_data.msgOffset);
-                        scan_data.msgOffset = pt_start_byte + 17;
-                        scan_point_2205.layer = (uint8_t)read_one_byte(msgBuf, scan_data.msgOffset);
-                        scan_data.msgOffset = pt_start_byte + 18;
-                        scan_point_2205.echo = (uint8_t)read_one_byte(msgBuf, scan_data.msgOffset);
-                        scan_data.msgOffset = pt_start_byte + 20;
-                        scan_data.size = 4;
-                        scan_point_2205.time_stamp = (uint32_t)read_big_endian(msgBuf, scan_data);
-                        scan_data.msgOffset = pt_start_byte + 24;
-                        scan_data.size = 2;
-                        scan_point_2205.flags = (uint16_t)read_big_endian(msgBuf, scan_data);
-
-                        pt_start_byte = pt_start_byte + 28;
-
-                        lux_fusion_scan_2205.scan_point_list.push_back(scan_point_2205);
-
-
-                        cloud_point_2205.label = scan_point_2205.flags;
-                        cloud_point_2205.x = scan_point_2205.x_position;
-                        cloud_point_2205.y = scan_point_2205.y_position;
-                        cloud_point_2205.z = scan_point_2205.z_position;
-                        pcl_cloud_2205.points.push_back(cloud_point_2205);
-                    }
-
-                    lux_fusion_scan_2205.header = lux_header_msg;
-                    fusion_scan_2205_pub.publish(lux_fusion_scan_2205);
-
-                    pcl_cloud_2205.header.frame_id = frame_id;
-                    scan_pointcloud_2205_pub.publish(pcl_cloud_2205);
-
-                    eth0_raw_msg.data_type = data_type_hex;
-                    eth0_raw_msg.data_size = data_size;
-
-                    for(int eth_i = 0; eth_i < data_size; eth_i++)
-                    {
-                        eth0_raw_msg.data.push_back(msgBuf[eth_i]);
-                    }
-                    eth0_raw_tx_pub.publish(eth0_raw_msg);
-
-
-                }
-                // Fusion object data 2225
-                if (data_type == 0x2225)
-                {
-                    ROS_INFO("reading Fusion object data 0x2225");
-                    TCPMsg   object_data;
-                    ros_ibeo_lux::lux_fusion_object_data_2225    lux_fusion_object_2225;
-                    ros_ibeo_lux::ethernet_raw_tx      eth0_raw_msg;
-
-                    visualization_msgs::MarkerArray   object_markers_2225;
-
-                    object_data.size = 8;
-                    object_data.msgOffset = start_byte;
-                    object_data.factor = 1;
-                    object_data.valueOffset = 0;
-                    lux_fusion_object_2225.mid_scan_timestamp = (uint64_t)read_big_endian(msgBuf, object_data);
-                    object_data.msgOffset = start_byte + 8;
-                    object_data.size = 2;
-                    lux_fusion_object_2225.num_of_objects = (uint16_t)read_big_endian(msgBuf, object_data);
-
-                    ros_ibeo_lux::object_list_2225 scan_object;
-                    ros_ibeo_lux::float2D     object_point;
-                    int    object_start_byte = start_byte + 10;
-
-                    for(int k = 0; k < lux_fusion_object_2225.num_of_objects; k++)
-                    {
-                        object_data.msgOffset = object_start_byte;
-                        object_data.size = 2;
-                        scan_object.ID = (uint16_t)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 4;
-                        object_data.size = 4;
-                        scan_object.object_age = (uint32_t)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 8;
-                        object_data.size = 8;
-                        scan_object.time_stamp = (uint64_t)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 16;
-                        object_data.size = 2;
-                        scan_object.object_hidden_age = (uint16_t)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 18;
-                        scan_object.classification = (uint8_t)read_one_byte(msgBuf, object_data.msgOffset);
-                        object_data.msgOffset = object_start_byte + 19;
-                        scan_object.classification_certainty = (uint8_t)read_one_byte(msgBuf, object_data.msgOffset);
-                        object_data.msgOffset = object_start_byte + 20;
-                        object_data.size = 4;
-                        scan_object.calssifciation_age = (uint32_t)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 24;
-                        scan_object.bounding_box_center.x = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 28;
-                        scan_object.bounding_box_center.y = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 32;
-                        scan_object.bounding_box_size.x = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 36;
-                        scan_object.bounding_box_size.y = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 40;
-                        scan_object.object_box_center.x = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 44;
-                        scan_object.object_box_center.y = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 48;
-                        scan_object.object_box_center_sigma.x = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 52;
-                        scan_object.object_box_center_sigma.y = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 56;
-                        scan_object.object_box_size.x = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 60;
-                        scan_object.object_box_size.y = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 72;
-                        scan_object.yaw_angle = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 80;
-                        scan_object.relative_velocity.x = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 84;
-                        scan_object.relative_velocity.y = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 88;
-                        scan_object.relative_velocity_sigma.x = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 92;
-                        scan_object.relative_velocity_sigma.y = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 96;
-                        scan_object.absolute_velocity.x = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 100;
-                        scan_object.absolute_velocity.y = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 104;
-                        scan_object.absolute_velocity_sigma.x = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 108;
-                        scan_object.absolute_velocity_sigma.y = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 130;
-                        scan_object.number_of_contour_points = (uint8_t)read_one_byte(msgBuf, object_data.msgOffset);
-                        object_data.msgOffset = object_start_byte + 131;
-                        scan_object.closest_point_index = (uint8_t)read_one_byte(msgBuf, object_data.msgOffset);
-
-                        visualization_msgs::Marker   object_marker_2225;
-                        object_marker_2225.header.frame_id = frame_id;
-                        object_marker_2225.header.stamp = now;
-                        object_marker_2225.id  = scan_object.ID;
-                        object_marker_2225.ns = "object_contour_2225";
-                        object_marker_2225.type = visualization_msgs::Marker::LINE_STRIP;
-                        object_marker_2225.action = visualization_msgs::Marker::ADD;
-                        object_marker_2225.scale.x = object_marker_2225.scale.y = object_marker_2225.scale.z = 1;
-                        object_marker_2225.lifetime = ros::Duration(1.0);
-                        object_marker_2225.color.a = 0.5;
-                        object_marker_2225.color.r = object_marker_2225.color.g = object_marker_2225.color.b = 1.0;
-                        object_marker_2225.frame_locked = false;
-
-                        std::string   label;
-                        switch (scan_object.classification)
-                        {
-                            case 0:
-                                label = "Unclassified";
-                                // Unclassified - white
-                                break;
-                            case 1:
-                                label = "Unknown Small";
-                                // Unknown small - blue
-                                object_marker_2225.color.r = object_marker_2225.color.g = 0;
-                                break;
-                            case 2:
-                                label = "Unknown Big";
-                                // Unknown big - dark blue
-                                object_marker_2225.color.r = object_marker_2225.color.g = 0;
-                                object_marker_2225.color.b = 0.5;
-                                break;
-                            case 3:
-                                label = "Pedestrian";
-                                // Pedestrian - red
-                                object_marker_2225.color.g = object_marker_2225.color.b = 0;
-                                break;
-                            case 4:
-                                label = "Bike";
-                                // Bike - dark red
-                                object_marker_2225.color.g = object_marker_2225.color.b = 0;
-                                object_marker_2225.color.r = 0.5;
-                                break;
-                            case 5:
-                                label = "Car";
-                                // Car - green
-                                object_marker_2225.color.b = object_marker_2225.color.r = 0;
-                                break;
-                            case 6:
-                                label = "Truck";
-                                // Truck - dark gree
-                                object_marker_2225.color.b = object_marker_2225.color.r = 0;
-                                object_marker_2225.color.g = 0.5;
-                                break;
-                            case 12:
-                                label = "Under drivable";
-                                // Under drivable - grey
-                                object_marker_2225.color.r = object_marker_2225.color.b = object_marker_2225.color.g = 0.7;
-                                break;
-                            case 13:
-                                label = "Over drivable";
-                                // Over drivable - dark grey
-                                object_marker_2225.color.r = object_marker_2225.color.b = object_marker_2225.color.g = 0.4;
-                                break;
-                            default:
-                                label = "Unknown";
-                                object_marker_2225.color.r = object_marker_2225.color.b = object_marker_2225.color.g = 0.0;
-                                break;
-                        }
-
-                        int    pt_start_byte = object_start_byte + 132;
-
-                        for(int j =0; j< scan_object.number_of_contour_points; j++)
-                        {
-                            object_data.msgOffset = pt_start_byte;
-                            object_data.size = 4;
-                            object_point.x = (float)read_big_endian(msgBuf, object_data);
-                            object_data.msgOffset = pt_start_byte + 4;
-                            object_point.y = (float)read_big_endian(msgBuf, object_data);
-                            scan_object.list_of_contour_points.push_back(object_point);
-                            pt_start_byte = pt_start_byte + 4;
-
-                            geometry_msgs::Point    dis_object_point;
-                            dis_object_point.x = object_point.x;
-                            dis_object_point.y = object_point.y;
-                            object_marker_2225.points.push_back(dis_object_point);
-                        }
-                        object_start_byte = object_start_byte + 132 + 8*scan_object.number_of_contour_points;
-
-                        lux_fusion_object_2225.object.push_back(scan_object);
-                        object_markers_2225.markers.push_back(object_marker_2225);
-                    }
-
-                    lux_fusion_object_2225.header = lux_header_msg;
-                    fusion_object_2225_pub.publish(lux_fusion_object_2225);
-
-                    object_markers_2225_pub.publish(object_markers_2225);
-
-                    eth0_raw_msg.data_type = data_type_hex;
-                    eth0_raw_msg.data_size = data_size;
-
-                    for(int eth_i = 0; eth_i < data_size; eth_i++)
-                    {
-                        eth0_raw_msg.data.push_back(msgBuf[eth_i]);
-                    }
-                    eth0_raw_tx_pub.publish(eth0_raw_msg);
-                }
-
-                // Fusion object data 2280
-                if (data_type == 0x2280)
-                {
-                    ROS_INFO("reading Fusion object data 0x2280");
-                    TCPMsg   object_data;
-                    ros_ibeo_lux::lux_fusion_object_data_2280    lux_fusion_object_2280;
-                    ros_ibeo_lux::ethernet_raw_tx      eth0_raw_msg;
-
-                    visualization_msgs::MarkerArray   object_markers_2280;
-
-                    object_data.size = 8;
-                    object_data.msgOffset = start_byte;
-                    object_data.factor = 1;
-                    object_data.valueOffset = 0;
-                    lux_fusion_object_2280.mid_scan_timestamp = (uint64_t)read_big_endian(msgBuf, object_data);
-                    object_data.msgOffset = start_byte + 8;
-                    object_data.size = 2;
-                    lux_fusion_object_2280.num_of_objects = (uint16_t)read_big_endian(msgBuf, object_data);
-
-                    ros_ibeo_lux::object_list_2280 scan_object;
-                    ros_ibeo_lux::float2D     object_point;
-                    int    object_start_byte = start_byte + 10;
-
-                    for(int k = 0; k < lux_fusion_object_2280.num_of_objects; k++)
-                    {
-                        object_data.msgOffset = object_start_byte;
-                        object_data.size = 8;
-                        scan_object.ID = (uint16_t)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 2;
-                        scan_object.flags = (uint16_t)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 4;
-                        object_data.size = 4;
-                        scan_object.object_age = (uint32_t)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 8;
-                        object_data.size = 8;
-                        scan_object.time_stamp = (uint64_t)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 16;
-                        object_data.size = 2;
-                        scan_object.object_prediction_age = (uint16_t)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 18;
-                        scan_object.classification = (uint8_t)read_one_byte(msgBuf, object_data.msgOffset);
-                        object_data.msgOffset = object_start_byte + 19;
-                        scan_object.classification_quality = (uint8_t)read_one_byte(msgBuf, object_data.msgOffset);
-                        object_data.msgOffset = object_start_byte + 20;
-                        object_data.size = 4;
-                        scan_object.calssifciation_age = (uint32_t)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 40;
-                        scan_object.object_box_center.x = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 44;
-                        scan_object.object_box_center.y = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 56;
-                        scan_object.object_box_size.x = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 60;
-                        scan_object.object_box_size.y = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 72;
-                        scan_object.object_course_angle = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 76;
-                        scan_object.object_course_angle_sigma = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 80;
-                        scan_object.relative_velocity.x = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 84;
-                        scan_object.relative_velocity.y = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 88;
-                        scan_object.relative_velocity_sigma.x = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 92;
-                        scan_object.relative_velocity_sigma.y = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 96;
-                        scan_object.absolute_velocity.x = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 100;
-                        scan_object.absolute_velocity.y = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 104;
-                        scan_object.absolute_velocity_sigma.x = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 108;
-                        scan_object.absolute_velocity_sigma.y = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 130;
-                        scan_object.number_of_contour_points = (uint8_t)read_one_byte(msgBuf, object_data.msgOffset);
-                        object_data.msgOffset = object_start_byte + 131;
-                        scan_object.closest_point_index = (uint8_t)read_one_byte(msgBuf, object_data.msgOffset);
-                        object_data.msgOffset = object_start_byte + 132;
-                        object_data.size = 2;
-                        scan_object.reference_point_location = (uint16_t)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 134;
-                        object_data.size = 4;
-                        scan_object.reference_point_coordinate.x = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 138;
-                        scan_object.reference_point_coordinate.y = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 142;
-                        scan_object.reference_point_coordinate_sigma.x = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 146;
-                        scan_object.reference_point_coordinate_sigma.y = (float)read_big_endian(msgBuf, object_data);
-                        object_data.msgOffset = object_start_byte + 162;
-                        object_data.size = 2;
-                        scan_object.object_priority = (uint16_t)read_big_endian(msgBuf, object_data);
-
-
-                        visualization_msgs::Marker   object_marker_2280;
-                        object_marker_2280.header.frame_id = frame_id;
-                        object_marker_2280.header.stamp = now;
-                        object_marker_2280.id  = scan_object.ID;
-                        object_marker_2280.ns = "object_contour_2280";
-                        object_marker_2280.type = visualization_msgs::Marker::LINE_STRIP;
-                        object_marker_2280.action = visualization_msgs::Marker::ADD;
-                        object_marker_2280.scale.x = object_marker_2280.scale.y = object_marker_2280.scale.z = 0.01;
-                        object_marker_2280.lifetime = ros::Duration(1.0);
-                        object_marker_2280.color.a = 0.5;
-                        object_marker_2280.color.r = object_marker_2280.color.g = object_marker_2280.color.b = 1.0;
-                        object_marker_2280.frame_locked = false;
-
-                        std::string   label;
-                        switch (scan_object.classification)
-                        {
-                            case 0:
-                                label = "Unclassified";
-                                // Unclassified - white
-                                break;
-                            case 1:
-                                label = "Unknown Small";
-                                // Unknown small - blue
-                                object_marker_2280.color.r = object_marker_2280.color.g = 0;
-                                break;
-                            case 2:
-                                label = "Unknown Big";
-                                // Unknown big - dark blue
-                                object_marker_2280.color.r = object_marker_2280.color.g = 0;
-                                object_marker_2280.color.b = 0.5;
-                                break;
-                            case 3:
-                                label = "Pedestrian";
-                                // Pedestrian - red
-                                object_marker_2280.color.g = object_marker_2280.color.b = 0;
-                                break;
-                            case 4:
-                                label = "Bike";
-                                // Bike - dark red
-                                object_marker_2280.color.g = object_marker_2280.color.b = 0;
-                                object_marker_2280.color.r = 0.5;
-                                break;
-                            case 5:
-                                label = "Car";
-                                // Car - green
-                                object_marker_2280.color.b = object_marker_2280.color.r = 0;
-                                break;
-                            case 6:
-                                label = "Truck";
-                                // Truck - dark gree
-                                object_marker_2280.color.b = object_marker_2280.color.r = 0;
-                                object_marker_2280.color.g = 0.5;
-                                break;
-                            case 12:
-                                label = "Under drivable";
-                                // Under drivable - grey
-                                object_marker_2280.color.r = object_marker_2280.color.b = object_marker_2280.color.g = 0.7;
-                                break;
-                            case 13:
-                                label = "Over drivable";
-                                // Over drivable - dark grey
-                                object_marker_2280.color.r = object_marker_2280.color.b = object_marker_2280.color.g = 0.4;
-                                break;
-                            default:
-                                label = "Unknown";
-                                object_marker_2280.color.r = object_marker_2280.color.b = object_marker_2280.color.g = 0.0;
-                                break;
-                        }
-
-
-                        int    pt_start_byte = object_start_byte + 132;
-
-                        for(int j =0; j< scan_object.number_of_contour_points; j++)
-                        {
-                            object_data.msgOffset = pt_start_byte;
-                            object_data.size = 4;
-                            object_point.x = (float)read_big_endian(msgBuf, object_data);
-                            object_data.msgOffset = pt_start_byte + 4;
-                            object_point.y = (float)read_big_endian(msgBuf, object_data);
-                            scan_object.list_of_contour_points.push_back(object_point);
-                            pt_start_byte = pt_start_byte + 4;
-
-                            geometry_msgs::Point    dis_object_point;
-                            dis_object_point.x = object_point.x;
-                            dis_object_point.y = object_point.y;
-
-                            object_marker_2280.points.push_back(dis_object_point);
-
-                        }
-                        object_start_byte = object_start_byte + 132 + 8*scan_object.number_of_contour_points;
-
-                        lux_fusion_object_2280.object.push_back(scan_object);
-                        object_markers_2280.markers.push_back(object_marker_2280);
-                    }
-
-                    lux_fusion_object_2280.header = lux_header_msg;
-                    fusion_object_2280_pub.publish(lux_fusion_object_2280);
-
-                    object_markers_2280_pub.publish(object_markers_2280);
-
-                    eth0_raw_msg.data_type = data_type_hex;
-                    eth0_raw_msg.data_size = data_size;
-
-                    for(int eth_i = 0; eth_i < data_size; eth_i++)
-                    {
-                        eth0_raw_msg.data.push_back(msgBuf[eth_i]);
-                    }
-                    eth0_raw_tx_pub.publish(eth0_raw_msg);
-                }
-
-                // Fusion image data 2403
-                if (data_type == 0x2403)
-                {
-                    ROS_INFO("reading FUSION SYSTEM/ECU image 2403");
-                    TCPMsg   image_data;
-                    ros_ibeo_lux::lux_fusion_img_2403           lux_fusion_image_2403;
-                    ros_ibeo_lux::ethernet_raw_tx      eth0_raw_msg;
-
-                    image_data.size = 2;
-                    image_data.msgOffset = start_byte;
-                    image_data.factor = 1;
-                    image_data.valueOffset = 0;
-
-                    lux_fusion_image_2403.image_format = (uint16_t)read_big_endian(msgBuf, image_data);
-                    image_data.msgOffset = start_byte + 2;
-                    image_data.size = 4;
-                    lux_fusion_image_2403.time_stamp = (uint32_t)read_big_endian(msgBuf, image_data);
-                    image_data.msgOffset = start_byte  + 6;
-                    image_data.size = 8;
-                    lux_fusion_image_2403.time_stamp_ntp = (uint64_t)read_big_endian(msgBuf, image_data);
-                    image_data.msgOffset = start_byte  + 14;
-                    lux_fusion_image_2403.ID =  (uint8_t)read_one_byte(msgBuf, image_data.msgOffset);
-                    image_data.msgOffset = start_byte  + 15;
-                    image_data.size = 4;
-                    lux_fusion_image_2403.mouting_position.yaw_angle = (float)read_big_endian(msgBuf, image_data);
-                    image_data.msgOffset = start_byte  + 19;
-                    lux_fusion_image_2403.mouting_position.pitch_angle = (float)read_big_endian(msgBuf, image_data);
-                    image_data.msgOffset = start_byte  + 23;
-                    lux_fusion_image_2403.mouting_position.roll_angle = (float)read_big_endian(msgBuf, image_data);
-                    image_data.msgOffset = start_byte  + 27;
-                    lux_fusion_image_2403.mouting_position.offset_x = (float)read_big_endian(msgBuf, image_data);
-                    image_data.msgOffset = start_byte  + 31;
-                    lux_fusion_image_2403.mouting_position.offset_y = (float)read_big_endian(msgBuf, image_data);
-                    image_data.msgOffset = start_byte  + 35;
-                    lux_fusion_image_2403.mouting_position.offset_z = (float)read_big_endian(msgBuf, image_data);
-                    image_data.msgOffset = start_byte  + 39;
-                    image_data.size = 8;
-                    lux_fusion_image_2403.horizontal_opening_angle = read_big_endian(msgBuf, image_data);
-                    image_data.msgOffset = start_byte  + 47;
-                    lux_fusion_image_2403.vertical_opening_angle = read_big_endian(msgBuf, image_data);
-                    image_data.msgOffset = start_byte  + 55;
-                    image_data.size = 2;
-                    lux_fusion_image_2403.image_width = (uint16_t)read_big_endian(msgBuf, image_data);
-                    image_data.msgOffset = start_byte  + 57;
-                    lux_fusion_image_2403.image_height = (uint16_t)read_big_endian(msgBuf, image_data);
-                    image_data.msgOffset = start_byte  + 59;
-                    image_data.size = 4;
-                    lux_fusion_image_2403.compress_size = (uint32_t)read_big_endian(msgBuf, image_data);
-
-                    //unsigned char   image_byte;
-                    int    image_start_byte = start_byte + 63;
-                    int    image_index;
-                    for(unsigned int k = 0; k < lux_fusion_image_2403.compress_size; k++)
-                    {
-                        image_index = image_start_byte + k;
-                        lux_fusion_image_2403.image_bytes.push_back((uint8_t)read_one_byte(msgBuf, image_index));
-                    }
-
-                    lux_fusion_image_2403.header = lux_header_msg;
-                    fusion_img_2403_pub.publish(lux_fusion_image_2403);
-
-                    eth0_raw_msg.data_type = data_type_hex;
-                    eth0_raw_msg.data_size = data_size;
-
-                    for(int eth_i = 0; eth_i < data_size; eth_i++)
-                    {
-                        eth0_raw_msg.data.push_back(msgBuf[eth_i]);
-                    }
-                    eth0_raw_tx_pub.publish(eth0_raw_msg);
-                }
-
-
-                //Fusion vehicle state 2806
-                if (data_type == 0x2806)
-                {
-                    ROS_INFO("reading Fusion vehicle state data 0x2806");
-                    TCPMsg   vehicle_state_data;
-                    ros_ibeo_lux::lux_fusion_vehicle_state    lux_vehicle_state_msg;
-                    ros_ibeo_lux::ethernet_raw_tx      eth0_raw_msg;
-
-                    vehicle_state_data.size = 8;
-                    vehicle_state_data.msgOffset = start_byte + 4;
-                    vehicle_state_data.factor = 1;
-                    vehicle_state_data.valueOffset = 0;
-                    lux_vehicle_state_msg.time_stamp = (uint64_t)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 12;
-                    vehicle_state_data.size = 4;
-                    lux_vehicle_state_msg.distance_x = (int32_t)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 16;
-                    lux_vehicle_state_msg.distance_y = (int32_t)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 20;
-                    lux_vehicle_state_msg.course_angle = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 24;
-                    lux_vehicle_state_msg.longitudinal_velocity = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 28;
-                    lux_vehicle_state_msg.yaw_rate = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 32;
-                    lux_vehicle_state_msg.steering_wheel_angle = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 40;
-                    lux_vehicle_state_msg.front_wheel_angle = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 46;
-                    lux_vehicle_state_msg.vehicle_width = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 54;
-                    lux_vehicle_state_msg.front_axle_to_front_axle = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 58;
-                    lux_vehicle_state_msg.rear_axle_to_front_axle = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 62;
-                    lux_vehicle_state_msg.rear_axle_to_vehicle_rear = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 70;
-                    lux_vehicle_state_msg.steer_ratio_poly0 = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 74;
-                    lux_vehicle_state_msg.steer_ratio_poly1 = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 78;
-                    lux_vehicle_state_msg.steer_ratio_poly2 = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 82;
-                    lux_vehicle_state_msg.steer_ratio_poly3 = (float)read_big_endian(msgBuf, vehicle_state_data);
-
-                    lux_vehicle_state_msg.header  = lux_header_msg;
-                    vehicle_state_pub.publish(lux_vehicle_state_msg);
-
-                    eth0_raw_msg.data_type = data_type_hex;
-                    eth0_raw_msg.data_size = data_size;
-
-                    for(int eth_i = 0; eth_i < data_size; eth_i++)
-                    {
-                        eth0_raw_msg.data.push_back(msgBuf[eth_i]);
-                    }
-                    eth0_raw_tx_pub.publish(eth0_raw_msg);
-                }
-                //Fusion vehicle state 2807
-                if (data_type == 0x2807)
-                {
-                    ROS_INFO("reading Fusion vehicle state data 0x2807");
-                    TCPMsg   vehicle_state_data;
-                    ros_ibeo_lux::lux_fusion_vehicle_state    lux_vehicle_state_msg;
-                    ros_ibeo_lux::ethernet_raw_tx      eth0_raw_msg;
-
-                    vehicle_state_data.size = 8;
-                    vehicle_state_data.msgOffset = start_byte + 4;
-                    vehicle_state_data.factor = 1;
-                    vehicle_state_data.valueOffset = 0;
-                    lux_vehicle_state_msg.time_stamp = (uint64_t)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 12;
-                    vehicle_state_data.size = 4;
-                    lux_vehicle_state_msg.distance_x = (int32_t)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 16;
-                    lux_vehicle_state_msg.distance_y = (int32_t)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 20;
-                    lux_vehicle_state_msg.course_angle = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 24;
-                    lux_vehicle_state_msg.longitudinal_velocity = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 28;
-                    lux_vehicle_state_msg.yaw_rate = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 32;
-                    lux_vehicle_state_msg.steering_wheel_angle = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 40;
-                    lux_vehicle_state_msg.front_wheel_angle = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 46;
-                    lux_vehicle_state_msg.vehicle_width = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 54;
-                    lux_vehicle_state_msg.front_axle_to_front_axle = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 58;
-                    lux_vehicle_state_msg.rear_axle_to_front_axle = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 62;
-                    lux_vehicle_state_msg.rear_axle_to_vehicle_rear = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 70;
-                    lux_vehicle_state_msg.steer_ratio_poly0 = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 74;
-                    lux_vehicle_state_msg.steer_ratio_poly1 = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 78;
-                    lux_vehicle_state_msg.steer_ratio_poly2 = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 82;
-                    lux_vehicle_state_msg.steer_ratio_poly3 = (float)read_big_endian(msgBuf, vehicle_state_data);
-                    vehicle_state_data.msgOffset = start_byte + 86;
-                    lux_vehicle_state_msg.lobitudinal_accelration = (float)read_big_endian(msgBuf, vehicle_state_data);
-
-                    lux_vehicle_state_msg.header  = lux_header_msg;
-                    vehicle_state_pub.publish(lux_vehicle_state_msg);
-
-                    eth0_raw_msg.data_type = data_type_hex;
-                    eth0_raw_msg.data_size = data_size;
-
-                    for(int eth_i = 0; eth_i < data_size; eth_i++)
-                    {
-                        eth0_raw_msg.data.push_back(msgBuf[eth_i]);
-                    }
-                    eth0_raw_tx_pub.publish(eth0_raw_msg);
-                }
-            }
-            // Wait for next loop
-            loop_rate.sleep();
-            ros::spinOnce();
+          ROS_WARN("LUX/LUX Fusion TCP Data out of sync. Offset by %d bytes", offset);
+          unsigned char temparray[LUX_HEADER_SIZE];
+          memcpy(temparray, head_msg + offset, (LUX_HEADER_SIZE - offset) * sizeof(char));
+          status = tcp_interface.read_exactly(head_msg,sizeof(head_msg), offset);
+          memcpy(temparray + LUX_HEADER_SIZE - offset, head_msg, offset * sizeof(char));
+          memcpy(head_msg, temparray, LUX_HEADER_SIZE * sizeof(char));
         }
-    } catch (std::exception& e) {
-        cerr << e.what() << endl;
-        socket.close();
-        return ERROR_UNHANDLED_EXCEPTION;
+        
+        unsigned char data_msg[header_tx.message_size_];
+
+        status = tcp_interface.read_exactly(data_msg, sizeof(data_msg), header_tx.message_size_);
+        tcp_raw_msg.header.stamp = now;
+        tcp_raw_msg.address = ip_address;
+        tcp_raw_msg.port = port;
+        tcp_raw_msg.data.clear();
+        for(int i = 0; i < LUX_HEADER_SIZE; i++)
+        {
+          tcp_raw_msg.data.push_back(head_msg[i]);
+        }
+        for(int i = 0; i < header_tx.message_size_; i++)
+        {
+          tcp_raw_msg.data.push_back(data_msg[i]);
+        }
+        tcp_raw_msg.size = tcp_raw_msg.data.size();
+        
+        raw_tcp_pub.publish(tcp_raw_msg);
+
+        lux_header_msg.message_size = header_tx.message_size_;
+        lux_header_msg.device_id = header_tx.device_id_;
+        lux_header_msg.data_type = header_tx.data_type_;
+        lux_header_msg.header.stamp = now;
+
+         if(lux_header_msg.data_type == 0x2202)
+         {
+            ROS_INFO("reading scan data 0x2202");
+
+            pcl::PointCloud <pcl::PointXYZL> pcl_cloud_2202;
+            pcl::PointXYZL cloud_point_2202;
+          
+            lux_scan_msg.header = lux_header_msg;
+  
+            // header needs to be set before parse since the offset that the
+            // tx message uses is contained in the header.
+            // shouldnt be required when a sync process is added if the MAGIC WORD is offset
+            lux_scan_data_tx.header_ = header_tx;
+            lux_scan_data_tx.parse(data_msg);
+
+            lux_scan_msg.scan_number = lux_scan_data_tx.scan_number_;
+            lux_scan_msg.scan_status = lux_scan_data_tx.scan_status_;
+            lux_scan_msg.sync_phase_offset = lux_scan_data_tx.sync_phase_offset_;
+            lux_scan_msg.scan_start_time = lux_scan_data_tx.scan_start_time_;
+            lux_scan_msg.scan_end_time = lux_scan_data_tx.scan_end_time_;
+            lux_scan_msg.angle_ticks = lux_scan_data_tx.angle_ticks_;
+            lux_scan_msg.start_angle = lux_scan_data_tx.start_angle_;
+            lux_scan_msg.end_angle = lux_scan_data_tx.end_angle_;
+            lux_scan_msg.num_scan_pts = lux_scan_data_tx.num_scan_pts_;
+            lux_scan_msg.mounting_yaw_angle = lux_scan_data_tx.mounting_yaw_angle_;
+            lux_scan_msg.mounting_pitch_angle = lux_scan_data_tx.mounting_pitch_angle_;
+            lux_scan_msg.mounting_roll_angle = lux_scan_data_tx.mounting_roll_angle_;
+          lux_scan_msg.mounting_position_x = lux_scan_data_tx.mounting_position_x_;
+          lux_scan_msg.mounting_position_y = lux_scan_data_tx.mounting_position_y_;
+          lux_scan_msg.mounting_position_z = lux_scan_data_tx.mounting_position_z_;
+          lux_scan_msg.scan_flags = lux_scan_data_tx.scan_flags_;
+
+          pcl_cloud_2202.reserve(lux_scan_msg.num_scan_pts);
+          lux_scan_msg.scan_points.clear();
+
+          ibeo_lux_driver::ScanPoint msg_point;
+          ScanPoint tx_point;
+          for(int k = 0; k < lux_scan_msg.num_scan_pts; k++)
+          {
+            tx_point = lux_scan_data_tx.scan_points_[k];
+            msg_point.layer = tx_point.layer_;
+            msg_point.echo = tx_point.echo_;
+            msg_point.flags = tx_point.flags_;
+            msg_point.horizontal_angle = tx_point.horizontal_angle_;
+            msg_point.radial_distance = tx_point.radial_distance_;
+            msg_point.echo_pulse_width = tx_point.echo_pulse_width_;
+            
+            lux_scan_msg.scan_points.push_back(msg_point);
+
+            
+            cloud_point_2202.label = msg_point.flags;
+            // filter out flagged points
+            if(!(msg_point.flags & 0x0F))
+            {
+              double phi;
+              switch (msg_point.layer)
+              {
+                case 0: phi = -1.6 * PI / 180.0; break;
+                case 1: phi = -0.8 * PI / 180.0; break;
+                case 2: phi =  0.8 * PI / 180.0; break;
+                case 3: phi =  1.6 * PI / 180.0; break;
+                default: phi = 0.0; break;
+              }
+
+              cloud_point_2202.x = (double)msg_point.radial_distance*cos(convertAngle(msg_point.horizontal_angle,lux_scan_msg.angle_ticks))*cos(phi);
+              cloud_point_2202.y = (double)msg_point.radial_distance*sin(convertAngle(msg_point.horizontal_angle,lux_scan_msg.angle_ticks))*cos(phi);
+              cloud_point_2202.z = (double)msg_point.radial_distance*sin(phi);
+
+              pcl_cloud_2202.points.push_back(cloud_point_2202);
+            }
+          }
+
+          scan_data_pub.publish(lux_scan_msg);
+
+          pcl_cloud_2202.header.frame_id = frame_id;
+          scan_pointcloud_2202_pub.publish(pcl_cloud_2202);
+                    
+        }
+        // ibeo LUX object data
+        if (lux_header_msg.data_type == 0x2221)
+        {
+          ROS_INFO("reading object data 0x2221");
+          visualization_msgs::MarkerArray   object_markers;
+
+          lux_object_msg.header = lux_header_msg;
+
+          lux_object_data_tx.header_ = header_tx;
+          lux_object_data_tx.parse(data_msg);
+          
+          lux_object_msg.scan_start_time = lux_object_data_tx.scan_start_time_;
+          lux_object_msg.num_of_objects = lux_object_data_tx.num_of_objects_;
+
+          ibeo_lux_driver::LuxObject scan_object;
+          LuxObject object_tx;
+          ibeo_lux_driver::Point2D     object_point;
+          Point2D point_tx;
+          lux_object_msg.objects.clear();
+          for(int k = 0; k < lux_object_msg.num_of_objects; k++)
+          {
+            object_tx = lux_object_data_tx.objects_[k];
+            scan_object.ID = object_tx.ID_;
+            scan_object.age = object_tx.age_;
+            scan_object.prediction_age = object_tx.prediction_age_;
+            scan_object.relative_timestamp = object_tx.relative_timestamp_;
+            scan_object.reference_point.x = object_tx.reference_point_.x_;
+            scan_object.reference_point.y = object_tx.reference_point_.y_;
+            scan_object.reference_point_sigma.x = object_tx.reference_point_sigma_.x_;
+            scan_object.reference_point_sigma.y = object_tx.reference_point_sigma_.y_;
+            scan_object.closest_point.x = object_tx.closest_point_.x_;
+            scan_object.closest_point.y = object_tx.closest_point_.y_;
+            scan_object.bounding_box_center.x = object_tx.bounding_box_center_.x_;
+            scan_object.bounding_box_center.y = object_tx.bounding_box_center_.y_;
+            scan_object.bounding_box_width = object_tx.bounding_box_width_;
+            scan_object.bounding_box_length = object_tx.bounding_box_length_;
+            scan_object.object_box_center.x = 0.01 * object_tx.object_box_center_.x_;
+            scan_object.object_box_center.y = 0.01 * object_tx.object_box_center_.y_;
+            scan_object.object_box_size.x = 0.01 * object_tx.object_box_size_.x_;
+            scan_object.object_box_size.y = 0.01 * object_tx.object_box_size_.y_;
+            scan_object.object_box_orientation = object_tx.object_box_orientation_;
+            scan_object.absolute_velocity.x = object_tx.absolute_velocity_.x_;
+            scan_object.absolute_velocity.y = object_tx.absolute_velocity_.y_;
+            scan_object.absolute_velocity_sigma.x = object_tx.absolute_velocity_sigma_.x_;
+            scan_object.absolute_velocity_sigma.y = object_tx.absolute_velocity_sigma_.y_;
+            scan_object.relative_velocity.x = object_tx.relative_velocity_.x_;
+            scan_object.relative_velocity.y = object_tx.relative_velocity_.y_;
+            scan_object.classification = object_tx.classification_;
+            scan_object.classification_age = object_tx.classification_age_;
+            scan_object.classification_certainty = object_tx.classification_certainty_;
+            scan_object.number_of_contour_points = object_tx.number_of_contour_points_;
+
+            lux_object_msg.objects.push_back(scan_object);
+            
+            tf::Quaternion quaternion = tf::createQuaternionFromYaw(scan_object.object_box_orientation);
+
+            visualization_msgs::Marker   object_marker;
+            object_marker.header.frame_id = frame_id;
+            object_marker.header.stamp = now;
+            object_marker.id  = scan_object.ID;
+            object_marker.ns = "object_bounding_2221";
+            object_marker.type = visualization_msgs::Marker::CUBE;
+            object_marker.pose.position.x = scan_object.object_box_center.x;
+            object_marker.pose.position.y = scan_object.object_box_center.y;
+            object_marker.pose.orientation.x = quaternion.x();
+            object_marker.pose.orientation.y = quaternion.y();
+            object_marker.pose.orientation.z = quaternion.z();
+            object_marker.pose.orientation.w = quaternion.w();
+            object_marker.action = visualization_msgs::Marker::ADD;
+            object_marker.scale.x = (scan_object.object_box_size.x == 0)? 0.01 : scan_object.object_box_size.x;
+            object_marker.scale.y = (scan_object.object_box_size.y == 0) ? 0.01 : scan_object.object_box_size.y;
+            object_marker.scale.z = 0.75;
+            object_marker.lifetime = ros::Duration(0.2);
+            object_marker.color.a = 0.5;
+            object_marker.color.r = object_marker.color.g = object_marker.color.b = 1.0;
+            object_marker.frame_locked = false;
+
+            std::string   label;
+            switch (scan_object.classification)
+            {
+              case 0:
+                label = "Unclassified";
+                // Unclassified - white
+                break;
+              case 1:
+                label = "Unknown Small";
+                // Unknown small - blue
+                object_marker.color.r = object_marker.color.g = 0;
+                break;
+              case 2:
+                label = "Unknown Big";
+                // Unknown big - dark blue
+                object_marker.color.r = object_marker.color.g = 0;
+                object_marker.color.b = 0.5;
+                break;
+              case 3:
+                label = "Pedestrian";
+                // Pedestrian - red
+                object_marker.color.g = object_marker.color.b = 0;
+                break;
+              case 4:
+                label = "Bike";
+                // Bike - dark red
+                object_marker.color.g = object_marker.color.b = 0;
+                object_marker.color.r = 0.5;
+                break;
+              case 5:
+                label = "Car";
+                // Car - green
+                object_marker.color.b = object_marker.color.r = 0;
+                break;
+              case 6:
+                label = "Truck";
+                // Truck - dark green
+                object_marker.color.b = object_marker.color.r = 0;
+                object_marker.color.g = 0.5;
+                break;
+              case 12:
+                label = "Under drivable";
+                // Under drivable - grey
+                object_marker.color.r = object_marker.color.b = object_marker.color.g = 0.7;
+                break;
+              case 13:
+                label = "Over drivable";
+                // Over drivable - dark grey
+                object_marker.color.r = object_marker.color.b = object_marker.color.g = 0.4;
+                break;
+              default:
+                label = "Unknown";
+                object_marker.color.r = object_marker.color.b = object_marker.color.g = 0.0;
+                break;
+            }
+            visualization_msgs::Marker   object_label;
+            object_label.header.frame_id = frame_id;
+            object_label.header.stamp = now;
+            object_label.id  = scan_object.ID;
+            object_label.ns = "object_name_2221";
+            object_label.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+            object_label.pose.position.x = scan_object.object_box_center.x;
+            object_label.pose.position.y = scan_object.object_box_center.y;
+            object_label.text = label;
+            object_label.lifetime = object_marker.lifetime;
+            object_label.action = visualization_msgs::Marker::ADD;
+            object_label.color.r = object_label.color.g = object_label.color.b = 1;
+            object_label.color.a = 0.5;
+            
+            visualization_msgs::Marker      object_point_marker;
+            object_point_marker.header.stamp = now;
+            object_point_marker.header.frame_id = frame_id;
+            object_point_marker.type = visualization_msgs::Marker::POINTS;
+            object_point_marker.action = visualization_msgs::Marker::ADD;
+            object_point_marker.ns = "object_2221";
+            object_point_marker.points.reserve(scan_object.number_of_contour_points);
+            object_point_marker.scale.x = 0.1;
+            object_point_marker.scale.y = 0.1;
+            object_point_marker.color.r = 1;
+            object_point_marker.color.g = 1;
+            object_point_marker.color.b = 1;
+            object_point_marker.color.a = 0.7;
+            scan_object.list_of_contour_points.clear();
+            geometry_msgs::Point    dis_object_point;
+            for(int j =0; j< scan_object.number_of_contour_points; j++)
+            {
+               point_tx = object_tx.list_of_contour_points_[k];
+               object_point.x = point_tx.x_;
+               object_point.y = point_tx.y_;
+
+               scan_object.list_of_contour_points.push_back(object_point);
+               
+               dis_object_point.x = object_point.x;
+               dis_object_point.y = object_point.y;
+
+               object_point_marker.points.push_back(dis_object_point);
+             }
+             object_marker_2221_pub.publish(object_point_marker);
+             object_markers.markers.push_back(object_label);
+             object_markers.markers.push_back(object_marker);
+           }
+           object_data_pub.publish(lux_object_msg);
+           object_markers_2221_pub.publish(object_markers);
+          }
+         //vehicle state 2805
+         if(lux_header_msg.data_type == 0x2805)
+         {
+            ROS_INFO("reading vehicle state data 0x2805");
+            lux_vehicle_state_msg.header  = lux_header_msg;
+
+            lux_vehicle_state_tx.header_ = header_tx;
+            lux_vehicle_state_tx.parse(data_msg);
+
+            lux_vehicle_state_msg.timestamp = lux_vehicle_state_tx.timestamp_;
+            lux_vehicle_state_msg.scan_number = lux_vehicle_state_tx.scan_number_;
+            lux_vehicle_state_msg.error_flags = lux_vehicle_state_tx.error_flags_;
+            lux_vehicle_state_msg.longitudinal_velocity = lux_vehicle_state_tx.longitudinal_velocity_;
+            lux_vehicle_state_msg.steering_wheel_angle = lux_vehicle_state_tx.steering_wheel_angle_;
+            lux_vehicle_state_msg.front_wheel_angle = lux_vehicle_state_tx.front_wheel_angle_;
+            lux_vehicle_state_msg.vehicle_x = lux_vehicle_state_tx.vehicle_x_;
+            lux_vehicle_state_msg.vehicle_y = lux_vehicle_state_tx.vehicle_y_;
+            lux_vehicle_state_msg.course_angle = lux_vehicle_state_tx.course_angle_;
+            lux_vehicle_state_msg.time_difference = lux_vehicle_state_tx.time_difference_;
+            lux_vehicle_state_msg.diff_in_x = lux_vehicle_state_tx.diff_in_x_;
+            lux_vehicle_state_msg.diff_in_y = lux_vehicle_state_tx.diff_in_y_;
+            lux_vehicle_state_msg.diff_in_heading = lux_vehicle_state_tx.diff_in_heading_;
+            lux_vehicle_state_msg.current_yaw_rate = lux_vehicle_state_tx.current_yaw_rate_;
+            vehicle_state_pub.publish(lux_vehicle_state_msg);
+         }
+          // error and warning
+         if(lux_header_msg.data_type == 0x2030)
+         {
+            ROS_INFO("reading lux errors and warnings data 0x2030");
+            lux_error_warning_msg.header  = lux_header_msg;
+           
+            lux_error_warning_tx.header_ = header_tx;
+            lux_error_warning_tx.parse(data_msg);
+           
+            lux_error_warning_msg.error_register1 = lux_error_warning_tx.error_register1_;
+            lux_error_warning_msg.error_register2 = lux_error_warning_tx.error_register2_;
+            lux_error_warning_msg.warning_register1 = lux_error_warning_tx.warning_register1_;
+            lux_error_warning_msg.warning_register2 = lux_error_warning_tx.warning_register2_;
+
+            error_warn_pub.publish(lux_error_warning_msg);
+         }
+            // Fusion scan data 2204
+         if(lux_header_msg.data_type == 0x2204)
+          {       
+           ROS_INFO("reading FUSION SYSTEM/ECU scan data 0x2204");
+
+           //publish the point cloud
+           pcl::PointCloud <pcl::PointXYZL> pcl_cloud_2204;
+           pcl::PointXYZL cloud_point_2204;
+
+           lux_fusion_scan_2204.header = lux_header_msg;
+
+           fusion_scan_data_2204_tx.header_ = header_tx;
+           fusion_scan_data_2204_tx.parse(data_msg);
+
+           lux_fusion_scan_2204.scan_start_time = fusion_scan_data_2204_tx.scan_start_time_; 
+           lux_fusion_scan_2204.scan_end_time_offset = fusion_scan_data_2204_tx.scan_end_time_offset_;
+           lux_fusion_scan_2204.flags = fusion_scan_data_2204_tx.flags_;
+           lux_fusion_scan_2204.scan_number = fusion_scan_data_2204_tx.scan_number_;
+           lux_fusion_scan_2204.num_scan_pts = fusion_scan_data_2204_tx.num_scan_pts_;
+           lux_fusion_scan_2204.num_scan_info = fusion_scan_data_2204_tx.num_scan_info_;
+
+           ibeo_lux_driver::FusionScanInfo2204   scan_info_2204;
+           FusionScanInfo2204 info_tx;
+           lux_fusion_scan_2204.scan_info_list.clear();
+           for(int k = 0; k < lux_fusion_scan_2204.num_scan_info; k++)
+           {
+             info_tx = fusion_scan_data_2204_tx.scan_info_list_[k];
+             scan_info_2204.device_id = info_tx.device_id_;
+             scan_info_2204.type = info_tx.type_;
+             scan_info_2204.number = info_tx.number_;
+             scan_info_2204.start_angle = info_tx.start_angle_;
+             scan_info_2204.end_angle = info_tx.end_angle_;
+             scan_info_2204.yaw_angle = info_tx.yaw_angle_;
+             scan_info_2204.pitch_angle = info_tx.pitch_angle_;
+             scan_info_2204.roll_angle = info_tx.roll_angle_;
+             scan_info_2204.mount_offset_x = info_tx.mount_offset_x_;
+             scan_info_2204.mount_offset_y = info_tx.mount_offset_y_;
+             scan_info_2204.mount_offset_z = info_tx.mount_offset_z_;
+           
+             lux_fusion_scan_2204.scan_info_list.push_back(scan_info_2204);
+           }
+
+
+           pcl_cloud_2204.reserve(lux_fusion_scan_2204.num_scan_pts);
+
+           ibeo_lux_driver::FusionScanPoint  scan_point_2204;
+           FusionScanPoint point_tx;
+           lux_fusion_scan_2204.scan_point_list.clear();
+           for(int k = 0; k < lux_fusion_scan_2204.num_scan_pts; k++)
+           {
+             point_tx = fusion_scan_data_2204_tx.scan_point_list_[k];
+             scan_point_2204.x_position = point_tx.x_position_;
+             scan_point_2204.y_position = point_tx.y_position_;
+             scan_point_2204.z_position = point_tx.z_position_;
+             scan_point_2204.echo_width = point_tx.echo_width_;
+             scan_point_2204.device_id = point_tx.device_id_;
+             scan_point_2204.layer = point_tx.layer_;
+             scan_point_2204.echo = point_tx.echo_;
+             scan_point_2204.time_stamp = point_tx.time_stamp_;
+             scan_point_2204.flags = point_tx.flags_;
+
+             cloud_point_2204.label = scan_point_2204.flags;
+             cloud_point_2204.x = scan_point_2204.x_position;
+             cloud_point_2204.y = scan_point_2204.y_position;
+             cloud_point_2204.z = scan_point_2204.z_position;
+             pcl_cloud_2204.points.push_back(cloud_point_2204);
+
+             lux_fusion_scan_2204.scan_point_list.push_back(scan_point_2204);
+           }
+           fusion_scan_2204_pub.publish(lux_fusion_scan_2204);
+
+           pcl_cloud_2204.header.frame_id = frame_id;
+           scan_pointcloud_2204_pub.publish(pcl_cloud_2204);
+          }
+           // Fusion scan data 2205
+         if(lux_header_msg.data_type == 0x2205)
+         {
+         
+           ROS_INFO("reading FUSION SYSTEM/ECU scan data 0x2205");
+
+           pcl::PointCloud <pcl::PointXYZL> pcl_cloud_2205;
+           pcl::PointXYZL cloud_point_2205;
+
+           lux_fusion_scan_2205.header = lux_header_msg;
+           
+           fusion_scan_data_2205_tx.header_ = header_tx;
+           fusion_scan_data_2205_tx.parse(data_msg);
+
+           lux_fusion_scan_2205.scan_start_time = fusion_scan_data_2205_tx.scan_start_time_;
+           lux_fusion_scan_2205.scan_end_time_offset = fusion_scan_data_2205_tx.scan_end_time_offset_;
+           lux_fusion_scan_2205.flags = fusion_scan_data_2205_tx.flags_;
+           lux_fusion_scan_2205.scan_number = fusion_scan_data_2205_tx.scan_number_;
+           lux_fusion_scan_2205.num_scan_pts = fusion_scan_data_2205_tx.num_scan_pts_;
+           lux_fusion_scan_2205.num_scan_info = fusion_scan_data_2205_tx.num_scan_info_;
+
+           ibeo_lux_driver::FusionScanInfo2205   scan_info_2205;
+           FusionScanInfo2205   info_tx;
+           lux_fusion_scan_2205.scan_info_list.clear();
+           for(int k = 0; k < lux_fusion_scan_2205.num_scan_info; k++)
+           {
+             info_tx = fusion_scan_data_2205_tx.scan_info_list_[k];
+             scan_info_2205.device_id = info_tx.device_id_;
+             scan_info_2205.type = info_tx.type_;
+             scan_info_2205.number = info_tx.number_;
+             scan_info_2205.start_angle = info_tx.start_angle_;
+             scan_info_2205.end_angle = info_tx.end_angle_;
+             scan_info_2205.scan_start_time = info_tx.scan_start_time_;
+             scan_info_2205.scan_end_time = info_tx.scan_end_time_;
+             scan_info_2205.device_start_time = info_tx.device_start_time_;
+             scan_info_2205.device_end_time = info_tx.device_end_time_;
+             scan_info_2205.scan_frequency = info_tx.scan_frequency_;
+             scan_info_2205.beam_tilt = info_tx.beam_tilt_;
+             scan_info_2205.scan_flags = info_tx.scan_flags_;
+             scan_info_2205.mount_position.yaw_angle = info_tx.mount_position_.yaw_angle_;
+             scan_info_2205.mount_position.pitch_angle = info_tx.mount_position_.pitch_angle_;
+             scan_info_2205.mount_position.roll_angle = info_tx.mount_position_.roll_angle_;
+             scan_info_2205.mount_position.offset_x = info_tx.mount_position_.offset_x_;
+             scan_info_2205.mount_position.offset_y = info_tx.mount_position_.offset_y_;
+             scan_info_2205.mount_position.offset_z = info_tx.mount_position_.offset_z_;
+
+             scan_info_2205.resolution1.resolution_start_angle = info_tx.resolution1_.resolution_start_angle_;
+             scan_info_2205.resolution1.resolution = info_tx.resolution1_.resolution_;
+
+             scan_info_2205.resolution2.resolution_start_angle = info_tx.resolution1_.resolution_start_angle_;
+             scan_info_2205.resolution2.resolution = info_tx.resolution1_.resolution_;
+
+             scan_info_2205.resolution3.resolution_start_angle = info_tx.resolution1_.resolution_start_angle_;
+             scan_info_2205.resolution3.resolution = info_tx.resolution1_.resolution_;
+
+             scan_info_2205.resolution4.resolution_start_angle = info_tx.resolution1_.resolution_start_angle_;
+             scan_info_2205.resolution4.resolution = info_tx.resolution1_.resolution_;
+
+             scan_info_2205.resolution5.resolution_start_angle = info_tx.resolution1_.resolution_start_angle_;
+             scan_info_2205.resolution5.resolution = info_tx.resolution1_.resolution_;
+
+             scan_info_2205.resolution6.resolution_start_angle = info_tx.resolution1_.resolution_start_angle_;
+             scan_info_2205.resolution6.resolution = info_tx.resolution1_.resolution_;
+
+             scan_info_2205.resolution7.resolution_start_angle = info_tx.resolution1_.resolution_start_angle_;
+             scan_info_2205.resolution7.resolution = info_tx.resolution1_.resolution_;
+
+             scan_info_2205.resolution8.resolution_start_angle = info_tx.resolution1_.resolution_start_angle_;
+             scan_info_2205.resolution8.resolution = info_tx.resolution1_.resolution_;
+
+             lux_fusion_scan_2205.scan_info_list.push_back(scan_info_2205);
+           }
+
+           pcl_cloud_2205.reserve(lux_fusion_scan_2205.num_scan_pts);
+
+           ibeo_lux_driver::FusionScanPoint  scan_point_2205;
+           FusionScanPoint  point_tx;
+           lux_fusion_scan_2205.scan_point_list.clear();
+           for(int k = 0; k < lux_fusion_scan_2205.num_scan_pts; k++)
+           {
+             point_tx = fusion_scan_data_2205_tx.scan_point_list_[k];
+             scan_point_2205.x_position = point_tx.x_position_;
+             scan_point_2205.y_position = point_tx.y_position_;
+             scan_point_2205.z_position = point_tx.z_position_;
+             scan_point_2205.echo_width = point_tx.echo_width_;
+             scan_point_2205.device_id = point_tx.device_id_;
+             scan_point_2205.layer = point_tx.layer_;
+             scan_point_2205.echo = point_tx.echo_;
+             scan_point_2205.time_stamp = point_tx.time_stamp_;
+             scan_point_2205.flags = point_tx.flags_;
+
+             lux_fusion_scan_2205.scan_point_list.push_back(scan_point_2205);
+             
+             cloud_point_2205.label = scan_point_2205.flags;
+             cloud_point_2205.x = scan_point_2205.x_position;
+             cloud_point_2205.y = scan_point_2205.y_position;
+             cloud_point_2205.z = scan_point_2205.z_position;
+             pcl_cloud_2205.points.push_back(cloud_point_2205);
+           }
+
+           fusion_scan_2205_pub.publish(lux_fusion_scan_2205);
+
+           pcl_cloud_2205.header.frame_id = frame_id;
+           scan_pointcloud_2205_pub.publish(pcl_cloud_2205);
+         }
+           // Fusion object data 2225
+         if(lux_header_msg.data_type == 0x2225)
+         {
+         
+           ROS_INFO("reading Fusion object data 0x2225");
+           visualization_msgs::MarkerArray   object_markers_2225;
+
+           lux_fusion_object_2225.header = lux_header_msg;
+
+           fusion_object_data_2225_tx.header_ = header_tx;
+           fusion_object_data_2225_tx.parse(data_msg);
+
+           lux_fusion_object_2225.mid_scan_timestamp = fusion_object_data_2225_tx.mid_scan_timestamp_;
+           lux_fusion_object_2225.num_of_objects = fusion_object_data_2225_tx.num_of_objects_;
+
+           ibeo_lux_driver::FusionObject2225 scan_object;
+           FusionObject2225 object_tx;
+           lux_fusion_object_2225.objects.clear();
+           for(int k = 0; k < lux_fusion_object_2225.num_of_objects; k++)
+           {
+             object_tx = fusion_object_data_2225_tx.objects_[k];
+             scan_object.ID = object_tx.ID_;
+             scan_object.object_age = object_tx.object_age_;
+             scan_object.time_stamp = object_tx.time_stamp_;
+             scan_object.object_hidden_age = object_tx.object_hidden_age_;
+             scan_object.classification = object_tx.classification_;
+             scan_object.classification_certainty = object_tx.classification_certainty_;
+             scan_object.classification_age = object_tx.classification_age_;
+             scan_object.bounding_box_center.x = object_tx.bounding_box_center_.x_;
+             scan_object.bounding_box_center.y = object_tx.bounding_box_center_.y_;
+             scan_object.bounding_box_size.x = object_tx.bounding_box_size_.x_;
+             scan_object.bounding_box_size.y = object_tx.bounding_box_size_.y_;
+             scan_object.object_box_center.x = object_tx.object_box_center_.x_;
+             scan_object.object_box_center.y = object_tx.object_box_center_.y_;
+             scan_object.object_box_center_sigma.x = object_tx.object_box_center_sigma_.x_;
+             scan_object.object_box_center_sigma.y = object_tx.object_box_center_sigma_.y_;
+             scan_object.object_box_size.x = object_tx.object_box_size_.x_;
+             scan_object.object_box_size.y = object_tx.object_box_size_.y_;
+             scan_object.yaw_angle = object_tx.yaw_angle_;
+             scan_object.relative_velocity.x = object_tx.relative_velocity_.x_;
+             scan_object.relative_velocity.y = object_tx.relative_velocity_.y_;
+             scan_object.relative_velocity_sigma.x = object_tx.relative_velocity_sigma_.x_;
+             scan_object.relative_velocity_sigma.y = object_tx.relative_velocity_sigma_.y_;
+             scan_object.absolute_velocity.x = object_tx.absolute_velocity_.x_;
+             scan_object.absolute_velocity.y = object_tx.absolute_velocity_.y_;
+             scan_object.absolute_velocity_sigma.x = object_tx.absolute_velocity_sigma_.x_;
+             scan_object.absolute_velocity_sigma.y = object_tx.absolute_velocity_sigma_.y_;
+             scan_object.number_of_contour_points = object_tx.number_of_contour_points_;
+             scan_object.closest_point_index = object_tx.closest_point_index_;
+
+             lux_fusion_object_2225.objects.push_back(scan_object);
+             
+             visualization_msgs::Marker   object_marker_2225;
+             object_marker_2225.header.frame_id = frame_id;
+             object_marker_2225.header.stamp = now;
+             object_marker_2225.id  = scan_object.ID;
+             object_marker_2225.ns = "object_contour_2225";
+             object_marker_2225.type = visualization_msgs::Marker::LINE_STRIP;
+             object_marker_2225.action = visualization_msgs::Marker::ADD;
+             object_marker_2225.scale.x = object_marker_2225.scale.y = object_marker_2225.scale.z = 1;
+             object_marker_2225.lifetime = ros::Duration(1.0);
+             object_marker_2225.color.a = 0.5;
+             object_marker_2225.color.r = object_marker_2225.color.g = object_marker_2225.color.b = 1.0;
+             object_marker_2225.frame_locked = false;
+
+             std::string   label;
+             switch (scan_object.classification)
+             {
+               case 0:
+                 label = "Unclassified";
+                 // Unclassified - white
+                 break;
+               case 1:
+                 label = "Unknown Small";
+                 // Unknown small - blue
+                 object_marker_2225.color.r = object_marker_2225.color.g = 0;
+                 break;
+               case 2:
+                 label = "Unknown Big";
+                 // Unknown big - dark blue
+                 object_marker_2225.color.r = object_marker_2225.color.g = 0;
+                 object_marker_2225.color.b = 0.5;
+                 break;
+               case 3:
+                 label = "Pedestrian";
+                 // Pedestrian - red
+                 object_marker_2225.color.g = object_marker_2225.color.b = 0;
+                 break;
+               case 4:
+                 label = "Bike";
+                 // Bike - dark red
+                 object_marker_2225.color.g = object_marker_2225.color.b = 0;
+                 object_marker_2225.color.r = 0.5;
+                 break;
+               case 5:
+                 label = "Car";
+                 // Car - green
+                 object_marker_2225.color.b = object_marker_2225.color.r = 0;
+                 break;
+               case 6:
+                 label = "Truck";
+                 // Truck - dark gree
+                 object_marker_2225.color.b = object_marker_2225.color.r = 0;
+                 object_marker_2225.color.g = 0.5;
+                 break;
+               case 12:
+                 label = "Under drivable";
+                 // Under drivable - grey
+                 object_marker_2225.color.r = object_marker_2225.color.b = object_marker_2225.color.g = 0.7;
+                 break;
+               case 13:
+                 label = "Over drivable";
+                 // Over drivable - dark grey
+                 object_marker_2225.color.r = object_marker_2225.color.b = object_marker_2225.color.g = 0.4;
+                 break;
+               default:
+                 label = "Unknown";
+                 object_marker_2225.color.r = object_marker_2225.color.b = object_marker_2225.color.g = 0.0;
+                 break;
+             }
+
+             ibeo_lux_driver::Float2D object_point;
+             Float2D point_tx;
+             scan_object.list_of_contour_points.clear();
+             for(int j =0; j< scan_object.number_of_contour_points; j++)
+             {
+               point_tx = object_tx.list_of_contour_points_[j];
+               object_point.x = point_tx.x_;
+               object_point.y = point_tx.y_;
+
+               scan_object.list_of_contour_points.push_back(object_point);
+               geometry_msgs::Point    dis_object_point;
+               dis_object_point.x = object_point.x;
+               dis_object_point.y = object_point.y;
+               object_marker_2225.points.push_back(dis_object_point);
+             }
+             object_markers_2225.markers.push_back(object_marker_2225);
+           }
+
+           fusion_object_2225_pub.publish(lux_fusion_object_2225);
+
+           object_markers_2225_pub.publish(object_markers_2225);
+         }
+           // Fusion object data 2280
+         if(lux_header_msg.data_type == 0x2280)
+         {
+         
+           ROS_INFO("reading Fusion object data 0x2280");
+           visualization_msgs::MarkerArray   object_markers_2280;
+
+           lux_fusion_object_2280.header = lux_header_msg;
+
+           fusion_object_data_2280_tx.header_ = header_tx;
+           fusion_object_data_2280_tx.parse(data_msg);
+
+           lux_fusion_object_2280.mid_scan_timestamp = fusion_object_data_2280_tx.mid_scan_timestamp_;
+           lux_fusion_object_2280.num_of_objects = fusion_object_data_2280_tx.num_of_objects_;
+
+           ibeo_lux_driver::FusionObject2280 scan_object;
+           FusionObject2280 object_tx;
+           lux_fusion_object_2280.objects.clear();
+           for(int k = 0; k < lux_fusion_object_2280.num_of_objects; k++)
+           {
+             object_tx = fusion_object_data_2280_tx.objects_[k];
+             scan_object.ID = object_tx.ID_;
+             scan_object.flags = object_tx.flags_;
+             scan_object.object_age = object_tx.object_age_;
+             scan_object.time_stamp = object_tx.time_stamp_;
+             scan_object.object_prediction_age = object_tx.object_prediction_age_;
+             scan_object.classification = object_tx.classification_;
+             scan_object.classification_quality = object_tx.classification_quality_;
+             scan_object.classification_age = object_tx.classification_age_;
+             scan_object.object_box_center.x = object_tx.object_box_center_.x_;
+             scan_object.object_box_center.y = object_tx.object_box_center_.y_;
+             scan_object.object_box_size.x = object_tx.object_box_size_.x_;
+             scan_object.object_box_size.y = object_tx.object_box_size_.y_;
+             scan_object.object_course_angle = object_tx.object_course_angle_;
+             scan_object.object_course_angle_sigma = object_tx.object_course_angle_sigma_;
+             scan_object.relative_velocity.x = object_tx.relative_velocity_.x_;
+             scan_object.relative_velocity.y = object_tx.relative_velocity_.y_;
+             scan_object.relative_velocity_sigma.x = object_tx.relative_velocity_sigma_.x_;
+             scan_object.relative_velocity_sigma.y = object_tx.relative_velocity_sigma_.y_;
+             scan_object.absolute_velocity.x = object_tx.absolute_velocity_.x_;
+             scan_object.absolute_velocity.y = object_tx.absolute_velocity_.y_;
+             scan_object.absolute_velocity_sigma.x = object_tx.absolute_velocity_sigma_.x_;
+             scan_object.absolute_velocity_sigma.y = object_tx.absolute_velocity_sigma_.y_;
+             scan_object.number_of_contour_points = object_tx.number_of_contour_points_;
+             scan_object.closest_point_index = object_tx.closest_point_index_;
+             scan_object.reference_point_location = object_tx.reference_point_location_;
+             scan_object.reference_point_coordinate.x = object_tx.reference_point_coordinate_.x_;
+             scan_object.reference_point_coordinate.y = object_tx.reference_point_coordinate_.y_;
+             scan_object.reference_point_coordinate_sigma.x = object_tx.reference_point_coordinate_sigma_.x_;
+             scan_object.reference_point_coordinate_sigma.y = object_tx.reference_point_coordinate_sigma_.y_;
+             scan_object.object_priority = object_tx.object_priority_;
+
+             lux_fusion_object_2280.objects.push_back(scan_object);
+             visualization_msgs::Marker   object_marker_2280;
+             object_marker_2280.header.frame_id = frame_id;
+             object_marker_2280.header.stamp = now;
+             object_marker_2280.id  = scan_object.ID;
+             object_marker_2280.ns = "object_contour_2280";
+             object_marker_2280.type = visualization_msgs::Marker::LINE_STRIP;
+             object_marker_2280.action = visualization_msgs::Marker::ADD;
+             object_marker_2280.scale.x = object_marker_2280.scale.y = object_marker_2280.scale.z = 0.01;
+             object_marker_2280.lifetime = ros::Duration(1.0);
+             object_marker_2280.color.a = 0.5;
+             object_marker_2280.color.r = object_marker_2280.color.g = object_marker_2280.color.b = 1.0;
+             object_marker_2280.frame_locked = false;
+
+             std::string label;
+             switch (scan_object.classification)
+             {
+               case 0:
+                 label = "Unclassified";
+                 // Unclassified - white
+                 break;
+               case 1:
+                 label = "Unknown Small";
+                 // Unknown small - blue
+                 object_marker_2280.color.r = object_marker_2280.color.g = 0;
+                 break;
+               case 2:
+                 label = "Unknown Big";
+                 // Unknown big - dark blue
+                 object_marker_2280.color.r = object_marker_2280.color.g = 0;
+                 object_marker_2280.color.b = 0.5;
+                 break;
+               case 3:
+                 label = "Pedestrian";
+                 // Pedestrian - red
+                 object_marker_2280.color.g = object_marker_2280.color.b = 0;
+                 break;
+               case 4:
+                 label = "Bike";
+                 // Bike - dark red
+                 object_marker_2280.color.g = object_marker_2280.color.b = 0;
+                 object_marker_2280.color.r = 0.5;
+                 break;
+               case 5:
+                 label = "Car";
+                 // Car - green
+                 object_marker_2280.color.b = object_marker_2280.color.r = 0;
+                 break;
+               case 6:
+                 label = "Truck";
+                 // Truck - dark gree
+                 object_marker_2280.color.b = object_marker_2280.color.r = 0;
+                 object_marker_2280.color.g = 0.5;
+                 break;
+               case 12:
+                 label = "Under drivable";
+                 // Under drivable - grey
+                 object_marker_2280.color.r = object_marker_2280.color.b = object_marker_2280.color.g = 0.7;
+                 break;
+               case 13:
+                 label = "Over drivable";
+                 // Over drivable - dark grey
+                 object_marker_2280.color.r = object_marker_2280.color.b = object_marker_2280.color.g = 0.4;
+                 break;
+               default:
+                 label = "Unknown";
+                 object_marker_2280.color.r = object_marker_2280.color.b = object_marker_2280.color.g = 0.0;
+                 break;
+             }
+
+             ibeo_lux_driver::Float2D     object_point;
+             Float2D point_tx;
+             scan_object.list_of_contour_points.clear();
+             for(int j =0; j< scan_object.number_of_contour_points; j++)
+             {
+               point_tx = object_tx.list_of_contour_points_[j];
+               object_point.x = point_tx.x_;
+               object_point.y = point_tx.y_;
+
+               scan_object.list_of_contour_points.push_back(object_point);
+               
+               geometry_msgs::Point    dis_object_point;
+               dis_object_point.x = object_point.x;
+               dis_object_point.y = object_point.y;
+
+               object_marker_2280.points.push_back(dis_object_point);
+             }
+             object_markers_2280.markers.push_back(object_marker_2280);
+           }
+
+           fusion_object_2280_pub.publish(lux_fusion_object_2280);
+
+           object_markers_2280_pub.publish(object_markers_2280);
+         }
+           // Fusion image data 2403
+         if(lux_header_msg.data_type == 0x2403)
+         {
+         
+           ROS_INFO("reading FUSION SYSTEM/ECU image 2403");
+           lux_fusion_image_msg.header = lux_header_msg;
+
+           fusion_image_tx.header_ = header_tx;
+           fusion_image_tx.parse(data_msg);
+
+           lux_fusion_image_msg.image_format = fusion_image_tx.image_format_;
+           lux_fusion_image_msg.time_stamp = fusion_image_tx.time_stamp_;
+           lux_fusion_image_msg.time_stamp_ntp = fusion_image_tx.time_stamp_ntp_;
+           lux_fusion_image_msg.ID = fusion_image_tx.ID_;
+           lux_fusion_image_msg.mounting_position.yaw_angle = fusion_image_tx.mounting_position_.yaw_angle_;
+           lux_fusion_image_msg.mounting_position.pitch_angle = fusion_image_tx.mounting_position_.pitch_angle_;
+           lux_fusion_image_msg.mounting_position.roll_angle = fusion_image_tx.mounting_position_.roll_angle_;
+           lux_fusion_image_msg.mounting_position.offset_x = fusion_image_tx.mounting_position_.offset_x_;
+           lux_fusion_image_msg.mounting_position.offset_y = fusion_image_tx.mounting_position_.offset_y_;
+           lux_fusion_image_msg.mounting_position.offset_z = fusion_image_tx.mounting_position_.offset_z_;
+           lux_fusion_image_msg.horizontal_opening_angle = fusion_image_tx.horizontal_opening_angle_;
+           lux_fusion_image_msg.vertical_opening_angle = fusion_image_tx.vertical_opening_angle_;
+           lux_fusion_image_msg.image_width = fusion_image_tx.image_width_;
+           lux_fusion_image_msg.image_height = fusion_image_tx.image_height_;
+           lux_fusion_image_msg.compress_size = fusion_image_tx.compress_size_;
+           lux_fusion_image_msg.image_bytes = fusion_image_tx.image_bytes_; 
+           
+           fusion_img_2403_pub.publish(lux_fusion_image_msg);
+          }
+         //Fusion vehicle state 2806
+         if(lux_header_msg.data_type == 0x2806)
+         {
+           ROS_INFO("reading Fusion vehicle state data 0x2806");
+           lux_vehicle_state_2806_msg.header  = lux_header_msg;
+
+           fusion_vehicle_state_2806_tx.header_ = header_tx;
+           fusion_vehicle_state_2806_tx.parse(data_msg);
+
+           lux_vehicle_state_2806_msg.time_stamp = fusion_vehicle_state_2806_tx.time_stamp_;
+           lux_vehicle_state_2806_msg.distance_x = fusion_vehicle_state_2806_tx.distance_x_;
+           lux_vehicle_state_2806_msg.distance_y = fusion_vehicle_state_2806_tx.distance_y_;
+           lux_vehicle_state_2806_msg.course_angle = fusion_vehicle_state_2806_tx.course_angle_;
+           lux_vehicle_state_2806_msg.longitudinal_velocity = fusion_vehicle_state_2806_tx.longitudinal_velocity_;
+           lux_vehicle_state_2806_msg.yaw_rate = fusion_vehicle_state_2806_tx.yaw_rate_;
+           lux_vehicle_state_2806_msg.steering_wheel_angle = fusion_vehicle_state_2806_tx.steering_wheel_angle_;
+           lux_vehicle_state_2806_msg.front_wheel_angle = fusion_vehicle_state_2806_tx.front_wheel_angle_;
+           lux_vehicle_state_2806_msg.vehicle_width = fusion_vehicle_state_2806_tx.vehicle_width_;
+           lux_vehicle_state_2806_msg.vehicle_front_to_front_axle = fusion_vehicle_state_2806_tx.vehicle_front_to_front_axle_;
+           lux_vehicle_state_2806_msg.rear_axle_to_front_axle = fusion_vehicle_state_2806_tx.rear_axle_to_front_axle_;
+           lux_vehicle_state_2806_msg.rear_axle_to_vehicle_rear = fusion_vehicle_state_2806_tx.rear_axle_to_vehicle_rear_;
+           lux_vehicle_state_2806_msg.steer_ratio_poly0 = fusion_vehicle_state_2806_tx.steer_ratio_poly0_;
+           lux_vehicle_state_2806_msg.steer_ratio_poly1 = fusion_vehicle_state_2806_tx.steer_ratio_poly1_;
+           lux_vehicle_state_2806_msg.steer_ratio_poly2 = fusion_vehicle_state_2806_tx.steer_ratio_poly2_;
+           lux_vehicle_state_2806_msg.steer_ratio_poly3 = fusion_vehicle_state_2806_tx.steer_ratio_poly3_;
+
+           fusion_vehicle_2806_pub.publish(lux_vehicle_state_msg);
+         }
+           //Fusion vehicle state 2807
+         if(lux_header_msg.data_type == 0x2807)
+         {
+        
+           ROS_INFO("reading Fusion vehicle state data 0x2807");
+           lux_vehicle_state_2807_msg.header  = lux_header_msg;
+
+           fusion_vehicle_state_2807_tx.header_ = header_tx;
+           fusion_vehicle_state_2807_tx.parse(data_msg);
+
+           lux_vehicle_state_2807_msg.time_stamp = fusion_vehicle_state_2807_tx.time_stamp_;
+           lux_vehicle_state_2807_msg.distance_x = fusion_vehicle_state_2807_tx.distance_x_;
+           lux_vehicle_state_2807_msg.distance_y = fusion_vehicle_state_2807_tx.distance_y_;
+           lux_vehicle_state_2807_msg.course_angle = fusion_vehicle_state_2807_tx.course_angle_;
+           lux_vehicle_state_2807_msg.longitudinal_velocity = fusion_vehicle_state_2807_tx.longitudinal_velocity_;
+           lux_vehicle_state_2807_msg.yaw_rate = fusion_vehicle_state_2807_tx.yaw_rate_;
+           lux_vehicle_state_2807_msg.steering_wheel_angle = fusion_vehicle_state_2807_tx.steering_wheel_angle_;
+           lux_vehicle_state_2807_msg.front_wheel_angle = fusion_vehicle_state_2807_tx.front_wheel_angle_;
+           lux_vehicle_state_2807_msg.vehicle_width = fusion_vehicle_state_2807_tx.vehicle_width_;
+           lux_vehicle_state_2807_msg.vehicle_front_to_front_axle = fusion_vehicle_state_2807_tx.vehicle_front_to_front_axle_;
+           lux_vehicle_state_2807_msg.rear_axle_to_front_axle = fusion_vehicle_state_2807_tx.rear_axle_to_front_axle_;
+           lux_vehicle_state_2807_msg.rear_axle_to_vehicle_rear = fusion_vehicle_state_2807_tx.rear_axle_to_vehicle_rear_;
+           lux_vehicle_state_2807_msg.steer_ratio_poly0 = fusion_vehicle_state_2807_tx.steer_ratio_poly0_;
+           lux_vehicle_state_2807_msg.steer_ratio_poly1 = fusion_vehicle_state_2807_tx.steer_ratio_poly1_;
+           lux_vehicle_state_2807_msg.steer_ratio_poly2 = fusion_vehicle_state_2807_tx.steer_ratio_poly2_;
+           lux_vehicle_state_2807_msg.steer_ratio_poly3 = fusion_vehicle_state_2807_tx.steer_ratio_poly3_;
+           lux_vehicle_state_2807_msg.longitudinal_acceleration = fusion_vehicle_state_2807_tx.longitudinal_acceleration_;
+
+           lux_vehicle_state_2807_msg.header  = lux_header_msg;
+           fusion_vehicle_2807_pub.publish(lux_vehicle_state_2807_msg);
+        }
     }
-
-    socket.close();
-
-    return 0;
+  }
+  else
+  {
+    ROS_ERROR("Connection to LUX could not be opened");
+  }
+  tcp_interface.close();
+  return 0;
 }
 

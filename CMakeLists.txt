@@ -1,78 +1,69 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(ros_ibeo_lux)
+project(ibeo_lux_driver)
 
 add_definitions(-std=c++11 -Wall -Wextra -DBUILD_ROS)
 
 ## Find catkin and any catkin packages
 find_package(catkin REQUIRED COMPONENTS
-        roscpp
-        message_generation
-        std_msgs
-        genmsg
-        as_generic_msg
-        pcl_ros
-        geometry_msgs
-        sensor_msgs
-        visualization_msgs
-        )
+  network_interface
+  roscpp
+  message_generation
+  std_msgs
+  genmsg
+  pcl_ros
+  geometry_msgs
+  visualization_msgs
+)
 ## Declare ROS messages and services
 add_message_files(DIRECTORY msg FILES
-        # Tcp/Ip Tx
-        scan_point.msg
-        object_list.msg
-        point2D.msg
-        resolution.msg
-        size2D.msg
-        float2D.msg
-        test_point.msg
-        lux_header.msg
-        mount_position.msg
-        lux_fusion_scan_info.msg
-        lux_fusion_scan_point.msg
-        lux_scan_data_2202.msg
-        lux_object_data_2221.msg
-        lux_vehicle_state_2805.msg
-        lux_error_warning_2030.msg
-        lux_fusion_scan_data_2204.msg
-        lux_fusion_scan_info_2205.msg
-        lux_fusion_scan_data_2205.msg
-        lux_fusion_object_data_2225.msg
-        object_list_2225.msg
-        lux_fusion_object_data_2280.msg
-        object_list_2280.msg
-        lux_fusion_img_2403.msg
-        lux_fusion_vehicle_state.msg
-        ethernet_raw_tx.msg
-        )
+  Point2D.msg
+  Size2D.msg
+  Float2D.msg
+  Resolution.msg
+  MountPosition.msg
+  ScanPoint.msg
+  LuxObject.msg
+  LuxHeader.msg
+  LuxScanData.msg
+  LuxObjectData.msg
+  LuxVehicleState.msg
+  LuxErrorWarning.msg
+  FusionScanPoint.msg
+  FusionScanInfo2204.msg
+  FusionScanData2204.msg
+  FusionScanInfo2205.msg
+  FusionScanData2205.msg
+  FusionObject2225.msg
+  FusionObjectData2225.msg
+  FusionObjectData2280.msg
+  FusionObject2280.msg
+  FusionImage.msg
+  FusionVehicleState2806.msg
+  FusionVehicleState2807.msg
+)
 
 ## Generate added messages and services
-generate_messages(DEPENDENCIES std_msgs geometry_msgs)
+generate_messages(DEPENDENCIES std_msgs)
 
 ## Declare a catkin package
 catkin_package(CATKIN_DEPENDS
-        message_runtime
-        std_msgs
-        as_generic_msg
-        pcl_ros
-        geometry_msgs
-        sensor_msgs
-        visualization_msgs
-        )
+  network_interface
+  message_runtime
+  std_msgs
+  pcl_ros
+  geometry_msgs
+  visualization_msgs
+)
 
 ## Build executables
 include_directories(
-        core_ibeo_lux/include
-        ${catkin_INCLUDE_DIRS}
+  core_ibeo_lux/include
+  ${catkin_INCLUDE_DIRS}
 )
 
 add_executable(ros_ibeo_lux
-        core_ibeo_lux/src/TCPMsg.cpp
-        core_ibeo_lux/src/as_ibeo_lux.cpp
-        src/ros_ibeo_lux.cpp)
-
+  core_ibeo_lux/src/core_ibeo_lux.cpp
+  src/ros_ibeo_lux.cpp
+)
 
 target_link_libraries(ros_ibeo_lux ${catkin_LIBRARIES})
-add_dependencies(ros_ibeo_lux ros_ibeo_lux_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
-
-#target_link_libraries(as_delphi_vehicle_pub ${catkin_LIBRARIES})
-#add_dependencies(as_delphi_vehicle_pub ${catkin_EXPORTED_TARGETS})

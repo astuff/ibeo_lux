@@ -1,4 +1,4 @@
-lux_header    header
+LuxHeader    header
 
 #Ibeo Fusion vehicle state 2806 & 2807
 uint64        time_stamp
@@ -10,11 +10,11 @@ float32       yaw_rate
 float32       steering_wheel_angle
 float32       front_wheel_angle         # rad
 float32       vehicle_width             # m
-float32       front_axle_to_front_axle
+float32       vehicle_front_to_front_axle
 float32       rear_axle_to_front_axle
 float32       rear_axle_to_vehicle_rear
 float32       steer_ratio_poly0
 float32       steer_ratio_poly1
 float32       steer_ratio_poly2
 float32       steer_ratio_poly3
-float32       lobitudinal_accelration          # only in 2807
+float32       longitudinal_acceleration          # only in 2807

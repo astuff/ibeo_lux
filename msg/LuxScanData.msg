@@ -1,4 +1,4 @@
-lux_header   header
+LuxHeader   header
 
 #Ibeo Lux scan data
 uint16       scan_number
@@ -17,4 +17,4 @@ int16        mounting_position_x
 int16        mounting_position_y
 int16        mounting_position_z
 uint16       scan_flags
-scan_point[] scan_points     
+ScanPoint[]  scan_points     
