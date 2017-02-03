@@ -61,6 +61,84 @@ using namespace AS::Network;
 
 TCPInterface tcp_interface;
 
+visualization_msgs::Marker createWireframeMarker(float center_x, float center_y, float size_x, float size_y, float size_z)
+{
+  visualization_msgs::Marker box;
+  box.type = visualization_msgs::Marker::LINE_LIST;
+  box.action = visualization_msgs::Marker::ADD;
+  box.pose.position.x = center_x;
+  box.pose.position.y = center_y;
+  box.scale.x = 0.05;
+  geometry_msgs::Point p1, p2, p3, p4, p5, p6, p7, p8;
+
+  size_y = (size_y <= 0.1f)? 0.1f : size_y;
+  size_x = (size_x <= 0.1f)? 0.1f : size_x;
+
+  float half_x = (0.5) * size_x;
+  float half_y = (0.5) * size_y;
+
+  p1.x = half_x;
+  p1.y = half_y;
+  p1.z = size_z;
+  p2.x = half_x;
+  p2.y = -half_y;
+  p2.z = size_z;
+  p3.x = -half_x;
+  p3.y = -half_y;
+  p3.z = size_z;
+  p4.x = -half_x;
+  p4.y = half_y;
+  p4.z = size_z;
+  p5 = p1;
+  p5.z = -size_z;
+  p6 = p2;
+  p6.z = -size_z;
+  p7 = p3;
+  p7.z = -size_z;
+  p8 = p4;
+  p8.z = -size_z;
+
+  box.points.reserve(24);
+  
+  box.points.push_back(p1);
+  box.points.push_back(p2);
+
+  box.points.push_back(p2);
+  box.points.push_back(p3);
+
+  box.points.push_back(p3);
+  box.points.push_back(p4);
+
+  box.points.push_back(p4);
+  box.points.push_back(p1);
+
+  box.points.push_back(p1);
+  box.points.push_back(p5);
+
+  box.points.push_back(p2);
+  box.points.push_back(p6);
+
+  box.points.push_back(p3);
+  box.points.push_back(p7);
+
+  box.points.push_back(p4);
+  box.points.push_back(p8);
+
+  box.points.push_back(p5);
+  box.points.push_back(p6);
+
+  box.points.push_back(p6);
+  box.points.push_back(p7);
+
+  box.points.push_back(p7);
+  box.points.push_back(p8);
+
+  box.points.push_back(p8);
+  box.points.push_back(p5);
+
+  return box;
+}
+
 // Main routine
 int main(int argc, char **argv)
 {
@@ -313,15 +391,15 @@ int main(int argc, char **argv)
             scan_object.reference_point_sigma.y = object_tx.reference_point_sigma_.y_;
             scan_object.closest_point.x = object_tx.closest_point_.x_;
             scan_object.closest_point.y = object_tx.closest_point_.y_;
-            scan_object.bounding_box_center.x = object_tx.bounding_box_center_.x_;
-            scan_object.bounding_box_center.y = object_tx.bounding_box_center_.y_;
-            scan_object.bounding_box_width = object_tx.bounding_box_width_;
-            scan_object.bounding_box_length = object_tx.bounding_box_length_;
+            scan_object.bounding_box_center.x = 0.01 * object_tx.bounding_box_center_.x_;
+            scan_object.bounding_box_center.y = 0.01 * object_tx.bounding_box_center_.y_;
+            scan_object.bounding_box_width = 0.01 * object_tx.bounding_box_width_;
+            scan_object.bounding_box_length = 0.01 * object_tx.bounding_box_length_;
             scan_object.object_box_center.x = 0.01 * object_tx.object_box_center_.x_;
             scan_object.object_box_center.y = 0.01 * object_tx.object_box_center_.y_;
             scan_object.object_box_size.x = 0.01 * object_tx.object_box_size_.x_;
             scan_object.object_box_size.y = 0.01 * object_tx.object_box_size_.y_;
-            scan_object.object_box_orientation = object_tx.object_box_orientation_;
+            scan_object.object_box_orientation = (float)object_tx.object_box_orientation_;
             scan_object.absolute_velocity.x = object_tx.absolute_velocity_.x_;
             scan_object.absolute_velocity.y = object_tx.absolute_velocity_.y_;
             scan_object.absolute_velocity_sigma.x = object_tx.absolute_velocity_sigma_.x_;
@@ -335,24 +413,18 @@ int main(int argc, char **argv)
 
             lux_object_msg.objects.push_back(scan_object);
             
-            tf::Quaternion quaternion = tf::createQuaternionFromYaw(scan_object.object_box_orientation);
+            tf::Quaternion quaternion = tf::createQuaternionFromYaw(scan_object.object_box_orientation * 100/180 * M_PI);
 
-            visualization_msgs::Marker   object_marker;
+            visualization_msgs::Marker   object_marker = createWireframeMarker(scan_object.object_box_center.x, scan_object.object_box_center.y,
+                scan_object.object_box_size.x, scan_object.object_box_size.y, 0.75);
             object_marker.header.frame_id = frame_id;
             object_marker.header.stamp = now;
             object_marker.id  = scan_object.ID;
-            object_marker.ns = "object_bounding_2221";
-            object_marker.type = visualization_msgs::Marker::CUBE;
-            object_marker.pose.position.x = scan_object.object_box_center.x;
-            object_marker.pose.position.y = scan_object.object_box_center.y;
+            object_marker.ns = "lux_object_wireframe_2221";
             object_marker.pose.orientation.x = quaternion.x();
             object_marker.pose.orientation.y = quaternion.y();
             object_marker.pose.orientation.z = quaternion.z();
             object_marker.pose.orientation.w = quaternion.w();
-            object_marker.action = visualization_msgs::Marker::ADD;
-            object_marker.scale.x = (scan_object.object_box_size.x == 0)? 0.01 : scan_object.object_box_size.x;
-            object_marker.scale.y = (scan_object.object_box_size.y == 0) ? 0.01 : scan_object.object_box_size.y;
-            object_marker.scale.z = 0.75;
             object_marker.lifetime = ros::Duration(0.2);
             object_marker.color.a = 0.5;
             object_marker.color.r = object_marker.color.g = object_marker.color.b = 1.0;
@@ -417,11 +489,13 @@ int main(int argc, char **argv)
             object_label.header.frame_id = frame_id;
             object_label.header.stamp = now;
             object_label.id  = scan_object.ID;
-            object_label.ns = "object_name_2221";
+            object_label.ns = "lux_object_name_2221";
             object_label.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
             object_label.pose.position.x = scan_object.object_box_center.x;
             object_label.pose.position.y = scan_object.object_box_center.y;
+            object_label.pose.position.z = 0.5;
             object_label.text = label;
+            object_label.scale.z = 0.2;
             object_label.lifetime = object_marker.lifetime;
             object_label.action = visualization_msgs::Marker::ADD;
             object_label.color.r = object_label.color.g = object_label.color.b = 1;
@@ -733,16 +807,18 @@ int main(int argc, char **argv)
              scan_object.closest_point_index = object_tx.closest_point_index_;
 
              lux_fusion_object_2225.objects.push_back(scan_object);
-             
-             visualization_msgs::Marker   object_marker_2225;
+             tf::Quaternion quaternion = tf::createQuaternionFromYaw(scan_object.yaw_angle); 
+             visualization_msgs::Marker   object_marker_2225 = createWireframeMarker(scan_object.object_box_center.x, scan_object.object_box_center.y,
+                 scan_object.object_box_size.x, scan_object.object_box_size.y, 0.75);
              object_marker_2225.header.frame_id = frame_id;
              object_marker_2225.header.stamp = now;
              object_marker_2225.id  = scan_object.ID;
              object_marker_2225.ns = "object_contour_2225";
-             object_marker_2225.type = visualization_msgs::Marker::LINE_STRIP;
-             object_marker_2225.action = visualization_msgs::Marker::ADD;
-             object_marker_2225.scale.x = object_marker_2225.scale.y = object_marker_2225.scale.z = 1;
-             object_marker_2225.lifetime = ros::Duration(1.0);
+             object_marker_2225.lifetime = ros::Duration(0.2);
+             object_marker_2225.pose.orientation.x = quaternion.x();
+             object_marker_2225.pose.orientation.y = quaternion.y();
+             object_marker_2225.pose.orientation.z = quaternion.z();
+             object_marker_2225.pose.orientation.w = quaternion.w();
              object_marker_2225.color.a = 0.5;
              object_marker_2225.color.r = object_marker_2225.color.g = object_marker_2225.color.b = 1.0;
              object_marker_2225.frame_locked = false;
@@ -878,7 +954,8 @@ int main(int argc, char **argv)
              scan_object.object_priority = object_tx.object_priority_;
 
              lux_fusion_object_2280.objects.push_back(scan_object);
-             visualization_msgs::Marker   object_marker_2280;
+             visualization_msgs::Marker   object_marker_2280 = createWireframeMarker(scan_object.object_box_center.x, scan_object.object_box_center.y,
+                 scan_object.object_box_size.x, scan_object.object_box_size.y, 0.75);;
              object_marker_2280.header.frame_id = frame_id;
              object_marker_2280.header.stamp = now;
              object_marker_2280.id  = scan_object.ID;
