@@ -963,16 +963,18 @@ int main(int argc, char **argv)
              scan_object.object_priority = object_tx.object_priority_;
 
              lux_fusion_object_2280.objects.push_back(scan_object);
+             tf::Quaternion quaternion = tf::createQuaternionFromYaw(scan_object.object_course_angle * M_PI /180); 
              visualization_msgs::Marker   object_marker_2280 = createWireframeMarker(scan_object.object_box_center.x, scan_object.object_box_center.y,
                  scan_object.object_box_size.x, scan_object.object_box_size.y, 0.75);;
              object_marker_2280.header.frame_id = frame_id;
              object_marker_2280.header.stamp = now;
              object_marker_2280.id  = scan_object.ID;
              object_marker_2280.ns = "object_contour_2280";
-             object_marker_2280.type = visualization_msgs::Marker::LINE_STRIP;
-             object_marker_2280.action = visualization_msgs::Marker::ADD;
-             object_marker_2280.scale.x = object_marker_2280.scale.y = object_marker_2280.scale.z = 0.01;
-             object_marker_2280.lifetime = ros::Duration(1.0);
+             object_marker_2280.lifetime = ros::Duration(0.2);
+             object_marker_2280.pose.orientation.x = quaternion.x();
+             object_marker_2280.pose.orientation.y = quaternion.y();
+             object_marker_2280.pose.orientation.z = quaternion.z();
+             object_marker_2280.pose.orientation.w = quaternion.w();
              object_marker_2280.color.a = 0.5;
              object_marker_2280.color.r = object_marker_2280.color.g = object_marker_2280.color.b = 1.0;
              object_marker_2280.frame_locked = false;
