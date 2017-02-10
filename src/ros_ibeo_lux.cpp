@@ -146,6 +146,7 @@ int main(int argc, char **argv)
     string ip_address = "192.168.0.1";
     int port = 12002;
     string frame_id = "ibeo_lux";
+    bool is_fusion = false;
 
     // ROS initialization
     ros::init(argc, argv, "ibeo_lux_driver");
@@ -170,6 +171,10 @@ int main(int argc, char **argv)
        ROS_ERROR("Port Invalid");
        exit = true;
       }
+    }
+    if (priv.getParam("is_fusion", is_fusion))
+    {
+      ROS_INFO("is Fusion ECU: %s", if(is_fusion)? "true" : "false");
     }
     if (priv.getParam("sensor_frame_id", frame_id))
     {
@@ -240,9 +245,11 @@ int main(int argc, char **argv)
       // Loop as long as module should run
       
       unsigned char head_msg[LUX_HEADER_SIZE]; 
-      unsigned char set_filter_cmd[32] = {0xaf, 0xfe, 0xc0, 0xc2, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x20, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x02, 0x00, 0x00, 0xff,0xff};
-
-      status = tcp_interface.send(set_filter_cmd, sizeof(set_filter_cmd));
+      if(is_fusion)
+      {
+        unsigned char set_filter_cmd[32] = {0xaf, 0xfe, 0xc0, 0xc2, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x20, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x02, 0x00, 0x00, 0xff,0xff};
+        status = tcp_interface.send(set_filter_cmd, sizeof(set_filter_cmd));
+      }
       while (ros::ok())
       {
         // Get current time
