@@ -6,13 +6,13 @@
     <arg name="name" default="ibeo_lux_fusion"/>
 
     <node pkg="tf" type="static_transform_publisher" name="vehicle_to_$(arg lux_frame_id)" args="0 0 0 0 0 0 $(arg veh_frame_id) $(arg lux_frame_id) 100"/>
-    <include file="$(find ibeo_lux_driver)/launch/ibeo_lux_driver.launch">
+    <include file="$(find ibeo_lux_driver)/launch/ros_ibeo_lux.launch">
             <arg name="ip_address" value="192.168.0.100"/>
-            <arg name="port" type="int" value="12002"/>
+            <arg name="port" value="12002"/>
             <arg name="veh_frame_id" value="$(arg veh_frame_id)"/>
-            <arg name="sensor_frame_id" value="$(arg lux_frame_id)"/>           
-            <arg name="is_fusion" type="bool" value="true"/>           
-            <arg name="name" value="ibeo_fusion_ecu"/>           
-        </node>
+            <arg name="lux_frame_id" value="$(arg lux_frame_id)"/>           
+            <arg name="is_fusion" value="$(arg is_fusion_ecu)"/>           
+            <arg name="name" value="$(arg name)"/>           
+        </include>
 </launch>
 

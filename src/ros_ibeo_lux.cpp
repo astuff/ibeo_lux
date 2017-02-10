@@ -174,7 +174,7 @@ int main(int argc, char **argv)
     }
     if (priv.getParam("is_fusion", is_fusion))
     {
-      ROS_INFO("is Fusion ECU: %s", if(is_fusion)? "true" : "false");
+      ROS_INFO("is Fusion ECU: %s", (is_fusion)? "true" : "false");
     }
     if (priv.getParam("sensor_frame_id", frame_id))
     {
@@ -741,10 +741,10 @@ int main(int argc, char **argv)
            for(int k = 0; k < lux_fusion_scan_2205.num_scan_pts; k++)
            {
              point_tx = fusion_scan_data_2205_tx.scan_point_list_[k];
-             scan_point_2205.x_position = point_tx.x_position_;
-             scan_point_2205.y_position = point_tx.y_position_;
-             scan_point_2205.z_position = point_tx.z_position_;
-             scan_point_2205.echo_width = point_tx.echo_width_;
+             scan_point_2205.x_position = (float) point_tx.x_position_;
+             scan_point_2205.y_position = (float) point_tx.y_position_;
+             scan_point_2205.z_position = (float) point_tx.z_position_;
+             scan_point_2205.echo_width = (float) point_tx.echo_width_;
              scan_point_2205.device_id = point_tx.device_id_;
              scan_point_2205.layer = point_tx.layer_;
              scan_point_2205.echo = point_tx.echo_;
