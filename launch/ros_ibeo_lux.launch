@@ -7,7 +7,7 @@
     <arg name="ip_address" default="192.168.0.1"/>
     <arg name="port" default="12002"/>
 
-    <node pkg="ibeo_lux_driver" type="ros_ibeo_lux" name="$(arg name)">
+    <node pkg="ibeo_lux_driver" type="ibeo_lux_driver" name="$(arg name)">
       <param name="ip_address" value="$(arg ip_address)"/>
       <param name="port" type="int" value="$(arg port)"/>
       <param name="veh_frame_id" value="$(arg veh_frame_id)"/>

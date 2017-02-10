@@ -61,9 +61,19 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(ros_ibeo_lux
+add_executable(ibeo_lux_driver
   core_ibeo_lux/src/core_ibeo_lux.cpp
   src/ros_ibeo_lux.cpp
 )
 
-target_link_libraries(ros_ibeo_lux ${catkin_LIBRARIES})
+target_link_libraries(ibeo_lux_driver ${catkin_LIBRARIES})
+add_dependencies(ibeo_lux_driver ibeo_lux_driver_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
+install(TARGETS ${PROJECT_NAME}
+        ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+                        
+install(DIRECTORY launch/
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
+
