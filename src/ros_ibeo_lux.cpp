@@ -969,7 +969,7 @@ int main(int argc, char **argv)
              object_marker_2280.header.frame_id = frame_id;
              object_marker_2280.header.stamp = now;
              object_marker_2280.id  = scan_object.ID;
-             object_marker_2280.ns = "object_contour_2280";
+             object_marker_2280.ns = "object_box_2280";
              object_marker_2280.lifetime = ros::Duration(0.2);
              object_marker_2280.pose.orientation.x = quaternion.x();
              object_marker_2280.pose.orientation.y = quaternion.y();
@@ -1038,6 +1038,21 @@ int main(int argc, char **argv)
              ibeo_lux_driver::Float2D     object_point;
              Float2D point_tx;
              scan_object.list_of_contour_points.clear();
+            visualization_msgs::Marker      object_point_marker;
+            object_point_marker.header.stamp = now;
+            object_point_marker.header.frame_id = frame_id;
+            object_point_marker.type = visualization_msgs::Marker::POINTS;
+            object_point_marker.action = visualization_msgs::Marker::ADD;
+            object_point_marker.ns = "object_contour_2280";
+            object_point_marker.points.reserve(scan_object.number_of_contour_points);
+            object_point_marker.scale.x = 0.1;
+            object_point_marker.scale.y = 0.1;
+            object_point_marker.color.r = 1;
+            object_point_marker.color.g = 1;
+            object_point_marker.color.b = 1;
+            object_point_marker.color.a = 0.7;
+            scan_object.list_of_contour_points.clear();
+            geometry_msgs::Point    dis_object_point;
              for(int j =0; j< scan_object.number_of_contour_points; j++)
              {
                point_tx = object_tx.list_of_contour_points_[j];
@@ -1050,9 +1065,10 @@ int main(int argc, char **argv)
                dis_object_point.x = object_point.x;
                dis_object_point.y = object_point.y;
 
-               object_marker_2280.points.push_back(dis_object_point);
+               object_point_marker.points.push_back(dis_object_point);
              }
              object_markers_2280.markers.push_back(object_marker_2280);
+             object_markers_2280.markers.push_back(object_point_marker);
            }
 
            fusion_object_2280_pub.publish(lux_fusion_object_2280);
