@@ -19,7 +19,7 @@
 #include <csignal>
 
 #include <core_ibeo_lux.h>
-#include <network_interface.h>
+#include <network_interface/network_interface.h>
 
 //Ros
 #include <ros/ros.h>
