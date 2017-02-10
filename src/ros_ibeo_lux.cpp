@@ -354,9 +354,9 @@ int main(int argc, char **argv)
                 default: phi = 0.0; break;
               }
 
-              cloud_point_2202.x = (double)msg_point.radial_distance*cos(convertAngle(msg_point.horizontal_angle,lux_scan_msg.angle_ticks))*cos(phi);
-              cloud_point_2202.y = (double)msg_point.radial_distance*sin(convertAngle(msg_point.horizontal_angle,lux_scan_msg.angle_ticks))*cos(phi);
-              cloud_point_2202.z = (double)msg_point.radial_distance*sin(phi);
+              cloud_point_2202.x = (double)msg_point.radial_distance/100*cos(convertAngle(msg_point.horizontal_angle,lux_scan_msg.angle_ticks))*cos(phi);
+              cloud_point_2202.y = (double)msg_point.radial_distance/100*sin(convertAngle(msg_point.horizontal_angle,lux_scan_msg.angle_ticks))*cos(phi);
+              cloud_point_2202.z = (double)msg_point.radial_distance/100*sin(phi);
 
               pcl_cloud_2202.points.push_back(cloud_point_2202);
             }
@@ -963,7 +963,7 @@ int main(int argc, char **argv)
              scan_object.object_priority = object_tx.object_priority_;
 
              lux_fusion_object_2280.objects.push_back(scan_object);
-             tf::Quaternion quaternion = tf::createQuaternionFromYaw(scan_object.object_course_angle * M_PI /180); 
+             tf::Quaternion quaternion = tf::createQuaternionFromYaw(scan_object.object_course_angle); 
              visualization_msgs::Marker   object_marker_2280 = createWireframeMarker(scan_object.object_box_center.x, scan_object.object_box_center.y,
                  scan_object.object_box_size.x, scan_object.object_box_size.y, 0.75);;
              object_marker_2280.header.frame_id = frame_id;
