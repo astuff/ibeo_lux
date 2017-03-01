@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>ibeo_lux_driver</name>
+  <name>ibeo_lux</name>
   <version>0.1.0</version>
   <description>ROS driver for IBEO LUX</description>
 

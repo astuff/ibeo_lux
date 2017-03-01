@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(ibeo_lux_driver)
+project(ibeo_lux)
 
 add_definitions(-std=c++11 -Wall -Wextra -DBUILD_ROS)
 
@@ -61,13 +61,13 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(ibeo_lux_driver
+add_executable(ibeo_lux
   core_ibeo_lux/src/core_ibeo_lux.cpp
   src/ros_ibeo_lux.cpp
 )
 
-target_link_libraries(ibeo_lux_driver ${catkin_LIBRARIES})
-add_dependencies(ibeo_lux_driver ibeo_lux_driver_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
+add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 install(TARGETS ${PROJECT_NAME}
         ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

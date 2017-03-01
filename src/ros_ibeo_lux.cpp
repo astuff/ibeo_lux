@@ -29,26 +29,26 @@
 //Tx
 #include <network_interface/TCPFrame.h>
 
-#include <ibeo_lux_driver/LuxHeader.h>
+#include <ibeo_lux/LuxHeader.h>
 // single lux
-#include <ibeo_lux_driver/LuxErrorWarning.h>
-#include <ibeo_lux_driver/LuxObject.h>
-#include <ibeo_lux_driver/LuxObjectData.h>
-#include <ibeo_lux_driver/LuxVehicleState.h>
-#include <ibeo_lux_driver/LuxScanData.h>
+#include <ibeo_lux/LuxErrorWarning.h>
+#include <ibeo_lux/LuxObject.h>
+#include <ibeo_lux/LuxObjectData.h>
+#include <ibeo_lux/LuxVehicleState.h>
+#include <ibeo_lux/LuxScanData.h>
 
-#include <ibeo_lux_driver/FusionScanData2204.h>
-#include <ibeo_lux_driver/FusionScanInfo2204.h>
-#include <ibeo_lux_driver/FusionScanData2205.h>
-#include <ibeo_lux_driver/FusionScanInfo2205.h>
-#include <ibeo_lux_driver/FusionScanPoint.h>
-#include <ibeo_lux_driver/FusionObjectData2225.h>
-#include <ibeo_lux_driver/FusionObject2225.h>
-#include <ibeo_lux_driver/FusionObjectData2280.h>
-#include <ibeo_lux_driver/FusionObject2280.h>
-#include <ibeo_lux_driver/FusionImage.h>
-#include <ibeo_lux_driver/FusionVehicleState2806.h>
-#include <ibeo_lux_driver/FusionVehicleState2807.h>
+#include <ibeo_lux/FusionScanData2204.h>
+#include <ibeo_lux/FusionScanInfo2204.h>
+#include <ibeo_lux/FusionScanData2205.h>
+#include <ibeo_lux/FusionScanInfo2205.h>
+#include <ibeo_lux/FusionScanPoint.h>
+#include <ibeo_lux/FusionObjectData2225.h>
+#include <ibeo_lux/FusionObject2225.h>
+#include <ibeo_lux/FusionObjectData2280.h>
+#include <ibeo_lux/FusionObject2280.h>
+#include <ibeo_lux/FusionImage.h>
+#include <ibeo_lux/FusionVehicleState2806.h>
+#include <ibeo_lux/FusionVehicleState2807.h>
 // supplemental objects/messages
 
 #include <geometry_msgs/Point.h>
@@ -149,7 +149,7 @@ int main(int argc, char **argv)
     bool is_fusion = false;
 
     // ROS initialization
-    ros::init(argc, argv, "ibeo_lux_driver");
+    ros::init(argc, argv, "ibeo_lux");
     ros::NodeHandle n;
     ros::NodeHandle priv("~");
     ros::Rate loop_rate(1.0/0.01);
@@ -186,17 +186,17 @@ int main(int argc, char **argv)
     // Advertise messages to send
     ros::Publisher raw_tcp_pub = n.advertise<network_interface::TCPFrame>("raw_tcp_tx", 1);
 
-    ros::Publisher scan_data_pub = n.advertise<ibeo_lux_driver::LuxScanData>("lux_scan_data", 1);
-    ros::Publisher object_data_pub = n.advertise<ibeo_lux_driver::LuxObjectData>("lux_object_data", 1);
-    ros::Publisher vehicle_state_pub = n.advertise<ibeo_lux_driver::LuxVehicleState>("lux_vehicle_state", 1);
-    ros::Publisher error_warn_pub = n.advertise<ibeo_lux_driver::LuxErrorWarning>("lux_error_warning", 1);
-    ros::Publisher fusion_scan_2204_pub = n.advertise<ibeo_lux_driver::FusionScanData2204>("fusion_scan_data_2204", 1);
-    ros::Publisher fusion_scan_2205_pub = n.advertise<ibeo_lux_driver::FusionScanData2205>("fusion_scan_data_2205", 1);
-    ros::Publisher fusion_object_2225_pub = n.advertise<ibeo_lux_driver::FusionObjectData2225>("fusion_object_data_2225", 1);
-    ros::Publisher fusion_object_2280_pub = n.advertise<ibeo_lux_driver::FusionObjectData2280>("fusion_object_data_2280", 1);
-    ros::Publisher fusion_img_2403_pub = n.advertise<ibeo_lux_driver::FusionImage>("fusion_image_2403", 1);
-    ros::Publisher fusion_vehicle_2806_pub = n.advertise<ibeo_lux_driver::FusionVehicleState2806>("lux_fusion_vehicle_state_2806", 1);
-    ros::Publisher fusion_vehicle_2807_pub = n.advertise<ibeo_lux_driver::FusionVehicleState2807>("lux_fusion_vehicle_state_2807", 1);
+    ros::Publisher scan_data_pub = n.advertise<ibeo_lux::LuxScanData>("lux_scan_data", 1);
+    ros::Publisher object_data_pub = n.advertise<ibeo_lux::LuxObjectData>("lux_object_data", 1);
+    ros::Publisher vehicle_state_pub = n.advertise<ibeo_lux::LuxVehicleState>("lux_vehicle_state", 1);
+    ros::Publisher error_warn_pub = n.advertise<ibeo_lux::LuxErrorWarning>("lux_error_warning", 1);
+    ros::Publisher fusion_scan_2204_pub = n.advertise<ibeo_lux::FusionScanData2204>("fusion_scan_data_2204", 1);
+    ros::Publisher fusion_scan_2205_pub = n.advertise<ibeo_lux::FusionScanData2205>("fusion_scan_data_2205", 1);
+    ros::Publisher fusion_object_2225_pub = n.advertise<ibeo_lux::FusionObjectData2225>("fusion_object_data_2225", 1);
+    ros::Publisher fusion_object_2280_pub = n.advertise<ibeo_lux::FusionObjectData2280>("fusion_object_data_2280", 1);
+    ros::Publisher fusion_img_2403_pub = n.advertise<ibeo_lux::FusionImage>("fusion_image_2403", 1);
+    ros::Publisher fusion_vehicle_2806_pub = n.advertise<ibeo_lux::FusionVehicleState2806>("lux_fusion_vehicle_state_2806", 1);
+    ros::Publisher fusion_vehicle_2807_pub = n.advertise<ibeo_lux::FusionVehicleState2807>("lux_fusion_vehicle_state_2807", 1);
 
     // publish the visualization data
     ros::Publisher scan_pointcloud_2202_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("lux_point_cloud_2202", 1);
@@ -211,18 +211,18 @@ int main(int argc, char **argv)
     // Wait for time to be valid
     while (ros::Time::now().nsec == 0);
 
-    ibeo_lux_driver::LuxHeader lux_header_msg;
-    ibeo_lux_driver::LuxScanData lux_scan_msg;
-    ibeo_lux_driver::LuxObjectData lux_object_msg;
-    ibeo_lux_driver::LuxVehicleState lux_vehicle_state_msg;
-    ibeo_lux_driver::LuxErrorWarning lux_error_warning_msg;
-    ibeo_lux_driver::FusionScanData2204 lux_fusion_scan_2204;
-    ibeo_lux_driver::FusionScanData2205 lux_fusion_scan_2205;
-    ibeo_lux_driver::FusionObjectData2225 lux_fusion_object_2225;
-    ibeo_lux_driver::FusionObjectData2280 lux_fusion_object_2280;
-    ibeo_lux_driver::FusionImage lux_fusion_image_msg;
-    ibeo_lux_driver::FusionVehicleState2806 lux_vehicle_state_2806_msg;
-    ibeo_lux_driver::FusionVehicleState2807 lux_vehicle_state_2807_msg;
+    ibeo_lux::LuxHeader lux_header_msg;
+    ibeo_lux::LuxScanData lux_scan_msg;
+    ibeo_lux::LuxObjectData lux_object_msg;
+    ibeo_lux::LuxVehicleState lux_vehicle_state_msg;
+    ibeo_lux::LuxErrorWarning lux_error_warning_msg;
+    ibeo_lux::FusionScanData2204 lux_fusion_scan_2204;
+    ibeo_lux::FusionScanData2205 lux_fusion_scan_2205;
+    ibeo_lux::FusionObjectData2225 lux_fusion_object_2225;
+    ibeo_lux::FusionObjectData2280 lux_fusion_object_2280;
+    ibeo_lux::FusionImage lux_fusion_image_msg;
+    ibeo_lux::FusionVehicleState2806 lux_vehicle_state_2806_msg;
+    ibeo_lux::FusionVehicleState2807 lux_vehicle_state_2807_msg;
     
     network_interface::TCPFrame tcp_raw_msg;
 
@@ -325,7 +325,7 @@ int main(int argc, char **argv)
           pcl_cloud_2202.reserve(lux_scan_msg.num_scan_pts);
           lux_scan_msg.scan_points.clear();
 
-          ibeo_lux_driver::ScanPoint msg_point;
+          ibeo_lux::ScanPoint msg_point;
           ScanPoint tx_point;
           for(int k = 0; k < lux_scan_msg.num_scan_pts; k++)
           {
@@ -382,9 +382,9 @@ int main(int argc, char **argv)
           lux_object_msg.scan_start_time = lux_object_data_tx.scan_start_time_;
           lux_object_msg.num_of_objects = lux_object_data_tx.num_of_objects_;
 
-          ibeo_lux_driver::LuxObject scan_object;
+          ibeo_lux::LuxObject scan_object;
           LuxObject object_tx;
-          ibeo_lux_driver::Point2D     object_point;
+          ibeo_lux::Point2D     object_point;
           Point2D point_tx;
           lux_object_msg.objects.clear();
           for(int k = 0; k < lux_object_msg.num_of_objects; k++)
@@ -607,7 +607,7 @@ int main(int argc, char **argv)
            lux_fusion_scan_2204.num_scan_pts = fusion_scan_data_2204_tx.num_scan_pts_;
            lux_fusion_scan_2204.num_scan_info = fusion_scan_data_2204_tx.num_scan_info_;
 
-           ibeo_lux_driver::FusionScanInfo2204   scan_info_2204;
+           ibeo_lux::FusionScanInfo2204   scan_info_2204;
            FusionScanInfo2204 info_tx;
            lux_fusion_scan_2204.scan_info_list.clear();
            for(int k = 0; k < lux_fusion_scan_2204.num_scan_info; k++)
@@ -631,7 +631,7 @@ int main(int argc, char **argv)
 
            pcl_cloud_2204.reserve(lux_fusion_scan_2204.num_scan_pts);
 
-           ibeo_lux_driver::FusionScanPoint  scan_point_2204;
+           ibeo_lux::FusionScanPoint  scan_point_2204;
            FusionScanPoint point_tx;
            lux_fusion_scan_2204.scan_point_list.clear();
            for(int k = 0; k < lux_fusion_scan_2204.num_scan_pts; k++)
@@ -681,7 +681,7 @@ int main(int argc, char **argv)
            lux_fusion_scan_2205.num_scan_pts = fusion_scan_data_2205_tx.num_scan_pts_;
            lux_fusion_scan_2205.num_scan_info = fusion_scan_data_2205_tx.num_scan_info_;
 
-           ibeo_lux_driver::FusionScanInfo2205   scan_info_2205;
+           ibeo_lux::FusionScanInfo2205   scan_info_2205;
            FusionScanInfo2205   info_tx;
            lux_fusion_scan_2205.scan_info_list.clear();
            for(int k = 0; k < lux_fusion_scan_2205.num_scan_info; k++)
@@ -735,7 +735,7 @@ int main(int argc, char **argv)
 
            pcl_cloud_2205.reserve(lux_fusion_scan_2205.num_scan_pts);
 
-           ibeo_lux_driver::FusionScanPoint  scan_point_2205;
+           ibeo_lux::FusionScanPoint  scan_point_2205;
            FusionScanPoint  point_tx;
            lux_fusion_scan_2205.scan_point_list.clear();
            for(int k = 0; k < lux_fusion_scan_2205.num_scan_pts; k++)
@@ -780,7 +780,7 @@ int main(int argc, char **argv)
            lux_fusion_object_2225.mid_scan_timestamp = fusion_object_data_2225_tx.mid_scan_timestamp_;
            lux_fusion_object_2225.num_of_objects = fusion_object_data_2225_tx.num_of_objects_;
 
-           ibeo_lux_driver::FusionObject2225 scan_object;
+           ibeo_lux::FusionObject2225 scan_object;
            FusionObject2225 object_tx;
            lux_fusion_object_2225.objects.clear();
            for(int k = 0; k < lux_fusion_object_2225.num_of_objects; k++)
@@ -888,7 +888,7 @@ int main(int argc, char **argv)
                  break;
              }
 
-             ibeo_lux_driver::Float2D object_point;
+             ibeo_lux::Float2D object_point;
              Float2D point_tx;
              scan_object.list_of_contour_points.clear();
              for(int j =0; j< scan_object.number_of_contour_points; j++)
@@ -925,7 +925,7 @@ int main(int argc, char **argv)
            lux_fusion_object_2280.mid_scan_timestamp = fusion_object_data_2280_tx.mid_scan_timestamp_;
            lux_fusion_object_2280.num_of_objects = fusion_object_data_2280_tx.num_of_objects_;
 
-           ibeo_lux_driver::FusionObject2280 scan_object;
+           ibeo_lux::FusionObject2280 scan_object;
            FusionObject2280 object_tx;
            lux_fusion_object_2280.objects.clear();
            for(int k = 0; k < lux_fusion_object_2280.num_of_objects; k++)
@@ -1035,7 +1035,7 @@ int main(int argc, char **argv)
                  break;
              }
 
-             ibeo_lux_driver::Float2D     object_point;
+             ibeo_lux::Float2D     object_point;
              Float2D point_tx;
              scan_object.list_of_contour_points.clear();
             visualization_msgs::Marker      object_point_marker;
