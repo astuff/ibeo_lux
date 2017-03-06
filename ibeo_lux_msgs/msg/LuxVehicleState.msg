@@ -1,4 +1,5 @@
-LuxHeader    header
+Header       header
+LuxHeader    lux_header
 
 #Ibeo Lux vehicle state
 uint64        timestamp

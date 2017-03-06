@@ -1,4 +1,5 @@
-LuxHeader    header
+Header       header
+LuxHeader    lux_header
 
 #Ibeo Fusion vehicle state 2806 & 2807
 uint64        time_stamp

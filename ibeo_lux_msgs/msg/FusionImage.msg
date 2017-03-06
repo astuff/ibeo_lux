@@ -1,5 +1,6 @@
 #Data Type 0x2403
-LuxHeader    header
+Header       header
+LuxHeader    lux_header
 
 #Ibeo Fusion image 2403
 

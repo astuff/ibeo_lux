@@ -1,5 +1,6 @@
 # Data Type 0x2030
-LuxHeader    header
+Header       header
+LuxHeader    lux_header
 
 #Ibeo Lux error and warnings data
 string        error_register1

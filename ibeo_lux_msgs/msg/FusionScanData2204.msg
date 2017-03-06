@@ -1,4 +1,5 @@
-LuxHeader   header
+Header      header
+LuxHeader   lux_header
 
 #Ibeo FUSION SYSTEM/ECU scan data 2204
 
