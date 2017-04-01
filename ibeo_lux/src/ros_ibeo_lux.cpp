@@ -185,39 +185,33 @@ int main(int argc, char **argv)
 
   // Advertise messages to send
   ros::Publisher raw_tcp_pub = n.advertise<network_interface::TCPFrame>("tcp_tx", 1);
-  ros::Publisher scan_data_pub, object_data_pub, vehicle_state_pub, error_warn_pub;
+  /*ros::Publisher scan_data_pub, object_data_pub, vehicle_state_pub, error_warn_pub;
   ros::Publisher scan_pointcloud_2202_pub, object_markers_2221_pub, object_marker_2221_pub;
   ros::Publisher fusion_scan_2204_pub, fusion_scan_2205_pub, fusion_object_2225_pub, fusion_object_2280_pub, fusion_img_2403_pub, fusion_vehicle_2806_pub, fusion_vehicle_2807_pub;
-  ros::Publisher scan_pointcloud_2204_pub, scan_pointcloud_2205_pub, object_markers_2225_pub, object_markers_2280_pub;
+  ros::Publisher scan_pointcloud_2204_pub, scan_pointcloud_2205_pub, object_markers_2225_pub, object_markers_2280_pub;*/
 
-  if (!is_fusion)
-  {
-    //LUX Sensor Only
-    ros::Publisher scan_data_pub = n.advertise<ibeo_lux_msgs::LuxScanData>("parsed_tx/lux_scan_data", 1);
-    ros::Publisher object_data_pub = n.advertise<ibeo_lux_msgs::LuxObjectData>("parsed_tx/lux_object_data", 1);
-    ros::Publisher vehicle_state_pub = n.advertise<ibeo_lux_msgs::LuxVehicleState>("parsed_tx/lux_vehicle_state", 1);
-    ros::Publisher error_warn_pub = n.advertise<ibeo_lux_msgs::LuxErrorWarning>("parsed_tx/lux_error_warning", 1);
+  //LUX Sensor Only
+  ros::Publisher scan_data_pub = n.advertise<ibeo_lux_msgs::LuxScanData>("parsed_tx/lux_scan_data", 1);
+  ros::Publisher object_data_pub = n.advertise<ibeo_lux_msgs::LuxObjectData>("parsed_tx/lux_object_data", 1);
+  ros::Publisher vehicle_state_pub = n.advertise<ibeo_lux_msgs::LuxVehicleState>("parsed_tx/lux_vehicle_state", 1);
+  ros::Publisher error_warn_pub = n.advertise<ibeo_lux_msgs::LuxErrorWarning>("parsed_tx/lux_error_warning", 1);
 
-    ros::Publisher scan_pointcloud_2202_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("as_tx/lux_point_cloud_2202", 1);
-    ros::Publisher object_markers_2221_pub = n.advertise<visualization_msgs::MarkerArray>("as_tx/object_markers_array_2221", 1);
-    ros::Publisher object_marker_2221_pub = n.advertise<visualization_msgs::Marker>("as_tx/object_contour_points_2221", 1);
-  }
-  else
-  {
-    //Fusion ECU Only
-    ros::Publisher fusion_scan_2204_pub = n.advertise<ibeo_lux_msgs::FusionScanData2204>("parsed_tx/fusion_scan_data_2204", 1);
-    ros::Publisher fusion_scan_2205_pub = n.advertise<ibeo_lux_msgs::FusionScanData2205>("parsed_tx/fusion_scan_data_2205", 1);
-    ros::Publisher fusion_object_2225_pub = n.advertise<ibeo_lux_msgs::FusionObjectData2225>("parsed_tx/fusion_object_data_2225", 1);
-    ros::Publisher fusion_object_2280_pub = n.advertise<ibeo_lux_msgs::FusionObjectData2280>("parsed_tx/fusion_object_data_2280", 1);
-    ros::Publisher fusion_img_2403_pub = n.advertise<ibeo_lux_msgs::FusionImage>("parsed_tx/fusion_image_2403", 1);
-    ros::Publisher fusion_vehicle_2806_pub = n.advertise<ibeo_lux_msgs::FusionVehicleState2806>("parsed_tx/lux_fusion_vehicle_state_2806", 1);
-    ros::Publisher fusion_vehicle_2807_pub = n.advertise<ibeo_lux_msgs::FusionVehicleState2807>("parsed_tx/lux_fusion_vehicle_state_2807", 1);
+  ros::Publisher scan_pointcloud_2202_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("as_tx/lux_point_cloud_2202", 1);
+  ros::Publisher object_markers_2221_pub = n.advertise<visualization_msgs::MarkerArray>("as_tx/object_markers_array_2221", 1);
+  ros::Publisher object_marker_2221_pub = n.advertise<visualization_msgs::Marker>("as_tx/object_contour_points_2221", 1);
+  //Fusion ECU Only
+  ros::Publisher fusion_scan_2204_pub = n.advertise<ibeo_lux_msgs::FusionScanData2204>("parsed_tx/fusion_scan_data_2204", 1);
+  ros::Publisher fusion_scan_2205_pub = n.advertise<ibeo_lux_msgs::FusionScanData2205>("parsed_tx/fusion_scan_data_2205", 1);
+  ros::Publisher fusion_object_2225_pub = n.advertise<ibeo_lux_msgs::FusionObjectData2225>("parsed_tx/fusion_object_data_2225", 1);
+  ros::Publisher fusion_object_2280_pub = n.advertise<ibeo_lux_msgs::FusionObjectData2280>("parsed_tx/fusion_object_data_2280", 1);
+  ros::Publisher fusion_img_2403_pub = n.advertise<ibeo_lux_msgs::FusionImage>("parsed_tx/fusion_image_2403", 1);
+  ros::Publisher fusion_vehicle_2806_pub = n.advertise<ibeo_lux_msgs::FusionVehicleState2806>("parsed_tx/lux_fusion_vehicle_state_2806", 1);
+  ros::Publisher fusion_vehicle_2807_pub = n.advertise<ibeo_lux_msgs::FusionVehicleState2807>("parsed_tx/lux_fusion_vehicle_state_2807", 1);
 
-    ros::Publisher scan_pointcloud_2204_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("as_tx/lux_fusion_point_cloud_2204", 1);
-    ros::Publisher scan_pointcloud_2205_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("as_tx/lux_fusion_point_cloud_2205", 1);
-    ros::Publisher object_markers_2225_pub = n.advertise<visualization_msgs::MarkerArray>("as_tx/object_markers_array_2225", 1);
-    ros::Publisher object_markers_2280_pub = n.advertise<visualization_msgs::MarkerArray>("as_tx/object_markers_array_2280", 1);
-  }
+  ros::Publisher scan_pointcloud_2204_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("as_tx/lux_fusion_point_cloud_2204", 1);
+  ros::Publisher scan_pointcloud_2205_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("as_tx/lux_fusion_point_cloud_2205", 1);
+  ros::Publisher object_markers_2225_pub = n.advertise<visualization_msgs::MarkerArray>("as_tx/object_markers_array_2225", 1);
+  ros::Publisher object_markers_2280_pub = n.advertise<visualization_msgs::MarkerArray>("as_tx/object_markers_array_2280", 1);
 
   // Wait for time to be valid
   while (ros::Time::now().nsec == 0);
