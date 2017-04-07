@@ -296,7 +296,7 @@ int main(int argc, char **argv)
       lux_header_msg.device_id = header_tx.device_id_;
       lux_header_msg.data_type = header_tx.data_type_;
 
-      if(lux_header_msg.data_type == 0x2202)
+      if(!is_fusion && lux_header_msg.data_type == 0x2202)
       {
         ROS_INFO("reading scan data 0x2202");
 
@@ -378,7 +378,7 @@ int main(int argc, char **argv)
                   
       }
       // ibeo LUX object data
-      else if (lux_header_msg.data_type == 0x2221)
+      else if (!is_fusion && lux_header_msg.data_type == 0x2221)
       {
         ROS_INFO("reading object data 0x2221");
         visualization_msgs::MarkerArray   object_markers;
@@ -506,16 +506,16 @@ int main(int argc, char **argv)
           
           visualization_msgs::Marker   object_label;
           object_label.header.frame_id = frame_id;
-          object_label.id  = scan_object.ID;
+          object_label.id  = scan_object.ID + 1000;
           object_label.ns = label;
           object_label.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+          object_label.action = visualization_msgs::Marker::ADD;
           object_label.pose.position.x = scan_object.object_box_center.x;
           object_label.pose.position.y = scan_object.object_box_center.y;
           object_label.pose.position.z = 0.5;
           object_label.text = label;
           object_label.scale.z = 0.2;
           object_label.lifetime = object_marker.lifetime;
-          object_label.action = visualization_msgs::Marker::ADD;
           object_label.color.r = object_label.color.g = object_label.color.b = 1;
           object_label.color.a = 0.5;
           
@@ -524,13 +524,13 @@ int main(int argc, char **argv)
           object_point_marker.type = visualization_msgs::Marker::POINTS;
           object_point_marker.action = visualization_msgs::Marker::ADD;
           object_point_marker.ns = label;
-          object_point_marker.points.reserve(scan_object.number_of_contour_points);
-          object_point_marker.scale.x = 0.1;
-          object_point_marker.scale.y = 0.1;
+          object_point_marker.scale.x = 0.05;
+          object_point_marker.scale.y = 0.05;
           object_point_marker.color.r = 0;
           object_point_marker.color.g = 1;
           object_point_marker.color.b = 0;
           object_point_marker.color.a = 0.7;
+
           scan_object.list_of_contour_points.clear();
           geometry_msgs::Point    dis_object_point;
           for(int j =0; j< scan_object.number_of_contour_points; j++)
@@ -563,7 +563,7 @@ int main(int argc, char **argv)
         object_markers_2221_pub.publish(object_markers);
       }
       //vehicle state 2805
-      else if(lux_header_msg.data_type == 0x2805)
+      else if(!is_fusion && lux_header_msg.data_type == 0x2805)
       {
         ROS_INFO("reading vehicle state data 0x2805");
         lux_vehicle_state_msg.lux_header  = lux_header_msg;
@@ -591,7 +591,7 @@ int main(int argc, char **argv)
         vehicle_state_pub.publish(lux_vehicle_state_msg);
       }
       // error and warning
-      else if(lux_header_msg.data_type == 0x2030)
+      else if(!is_fusion && lux_header_msg.data_type == 0x2030)
       {
         ROS_INFO("reading lux errors and warnings data 0x2030");
         lux_error_warning_msg.lux_header  = lux_header_msg;
@@ -609,7 +609,7 @@ int main(int argc, char **argv)
         error_warn_pub.publish(lux_error_warning_msg);
       }
       // Fusion scan data 2204
-      else if(lux_header_msg.data_type == 0x2204)
+      else if(is_fusion && lux_header_msg.data_type == 0x2204)
       {       
         ROS_INFO("reading FUSION SYSTEM/ECU scan data 0x2204");
 
@@ -687,7 +687,7 @@ int main(int argc, char **argv)
         scan_pointcloud_2204_pub.publish(pcl_cloud_2204);
       }
       // Fusion scan data 2205
-      else if(lux_header_msg.data_type == 0x2205)
+      else if(is_fusion && lux_header_msg.data_type == 0x2205)
       {
         ROS_INFO("reading FUSION SYSTEM/ECU scan data 0x2205");
 
@@ -794,7 +794,7 @@ int main(int argc, char **argv)
         scan_pointcloud_2205_pub.publish(pcl_cloud_2205);
       }
       // Fusion object data 2225
-      else if(lux_header_msg.data_type == 0x2225)
+      else if(is_fusion && lux_header_msg.data_type == 0x2225)
       {
         ROS_INFO("reading Fusion object data 0x2225");
         visualization_msgs::MarkerArray   object_markers_2225;
@@ -941,7 +941,7 @@ int main(int argc, char **argv)
         object_markers_2225_pub.publish(object_markers_2225);
       }
       // Fusion object data 2280
-      else if(lux_header_msg.data_type == 0x2280)
+      else if(is_fusion && lux_header_msg.data_type == 0x2280)
       {
       
         ROS_INFO("reading Fusion object data 0x2280");
@@ -1107,7 +1107,7 @@ int main(int argc, char **argv)
         object_markers_2280_pub.publish(object_markers_2280);
       }
       // Fusion image data 2403
-      else if(lux_header_msg.data_type == 0x2403)
+      else if(is_fusion && lux_header_msg.data_type == 0x2403)
       {
       
         ROS_INFO("reading FUSION SYSTEM/ECU image 2403");
@@ -1136,7 +1136,7 @@ int main(int argc, char **argv)
         fusion_img_2403_pub.publish(lux_fusion_image_msg);
       }
       //Fusion vehicle state 2806
-      else if(lux_header_msg.data_type == 0x2806)
+      else if(is_fusion && lux_header_msg.data_type == 0x2806)
       {
         ROS_INFO("reading Fusion vehicle state data 0x2806");
         lux_vehicle_state_2806_msg.lux_header  = lux_header_msg;
@@ -1166,7 +1166,7 @@ int main(int argc, char **argv)
         fusion_vehicle_2806_pub.publish(lux_vehicle_state_msg);
       }
       //Fusion vehicle state 2807
-      else if(lux_header_msg.data_type == 0x2807)
+      else if(is_fusion && lux_header_msg.data_type == 0x2807)
       {
         ROS_INFO("reading Fusion vehicle state data 0x2807");
         lux_vehicle_state_2807_msg.lux_header  = lux_header_msg;
