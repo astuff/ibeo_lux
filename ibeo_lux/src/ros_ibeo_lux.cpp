@@ -185,33 +185,37 @@ int main(int argc, char **argv)
 
   // Advertise messages to send
   ros::Publisher raw_tcp_pub = n.advertise<network_interface::TCPFrame>("tcp_tx", 1);
-  /*ros::Publisher scan_data_pub, object_data_pub, vehicle_state_pub, error_warn_pub;
-  ros::Publisher scan_pointcloud_2202_pub, object_markers_2221_pub, object_marker_2221_pub;
+  ros::Publisher scan_data_pub, object_data_pub, vehicle_state_pub, error_warn_pub, scan_pointcloud_2202_pub, object_markers_2221_pub, object_marker_2221_pub;
   ros::Publisher fusion_scan_2204_pub, fusion_scan_2205_pub, fusion_object_2225_pub, fusion_object_2280_pub, fusion_img_2403_pub, fusion_vehicle_2806_pub, fusion_vehicle_2807_pub;
-  ros::Publisher scan_pointcloud_2204_pub, scan_pointcloud_2205_pub, object_markers_2225_pub, object_markers_2280_pub;*/
+  ros::Publisher scan_pointcloud_2204_pub, scan_pointcloud_2205_pub, object_markers_2225_pub, object_markers_2280_pub;
 
   //LUX Sensor Only
-  ros::Publisher scan_data_pub = n.advertise<ibeo_lux_msgs::LuxScanData>("parsed_tx/lux_scan_data", 1);
-  ros::Publisher object_data_pub = n.advertise<ibeo_lux_msgs::LuxObjectData>("parsed_tx/lux_object_data", 1);
-  ros::Publisher vehicle_state_pub = n.advertise<ibeo_lux_msgs::LuxVehicleState>("parsed_tx/lux_vehicle_state", 1);
-  ros::Publisher error_warn_pub = n.advertise<ibeo_lux_msgs::LuxErrorWarning>("parsed_tx/lux_error_warning", 1);
+  if(!is_fusion)
+  {
+  scan_data_pub = n.advertise<ibeo_lux_msgs::LuxScanData>("parsed_tx/lux_scan_data", 1);
+  object_data_pub = n.advertise<ibeo_lux_msgs::LuxObjectData>("parsed_tx/lux_object_data", 1);
+  vehicle_state_pub = n.advertise<ibeo_lux_msgs::LuxVehicleState>("parsed_tx/lux_vehicle_state", 1);
+  error_warn_pub = n.advertise<ibeo_lux_msgs::LuxErrorWarning>("parsed_tx/lux_error_warning", 1);
 
-  ros::Publisher scan_pointcloud_2202_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("as_tx/lux_point_cloud_2202", 1);
-  ros::Publisher object_markers_2221_pub = n.advertise<visualization_msgs::MarkerArray>("as_tx/object_markers_array_2221", 1);
-  ros::Publisher object_marker_2221_pub = n.advertise<visualization_msgs::Marker>("as_tx/object_contour_points_2221", 1);
-  //Fusion ECU Only
-  ros::Publisher fusion_scan_2204_pub = n.advertise<ibeo_lux_msgs::FusionScanData2204>("parsed_tx/fusion_scan_data_2204", 1);
-  ros::Publisher fusion_scan_2205_pub = n.advertise<ibeo_lux_msgs::FusionScanData2205>("parsed_tx/fusion_scan_data_2205", 1);
-  ros::Publisher fusion_object_2225_pub = n.advertise<ibeo_lux_msgs::FusionObjectData2225>("parsed_tx/fusion_object_data_2225", 1);
-  ros::Publisher fusion_object_2280_pub = n.advertise<ibeo_lux_msgs::FusionObjectData2280>("parsed_tx/fusion_object_data_2280", 1);
-  ros::Publisher fusion_img_2403_pub = n.advertise<ibeo_lux_msgs::FusionImage>("parsed_tx/fusion_image_2403", 1);
-  ros::Publisher fusion_vehicle_2806_pub = n.advertise<ibeo_lux_msgs::FusionVehicleState2806>("parsed_tx/lux_fusion_vehicle_state_2806", 1);
-  ros::Publisher fusion_vehicle_2807_pub = n.advertise<ibeo_lux_msgs::FusionVehicleState2807>("parsed_tx/lux_fusion_vehicle_state_2807", 1);
+  scan_pointcloud_2202_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("as_tx/lux_point_cloud_2202", 1);
+  object_markers_2221_pub = n.advertise<visualization_msgs::MarkerArray>("as_tx/object_markers_array_2221", 1);
+  object_marker_2221_pub = n.advertise<visualization_msgs::Marker>("as_tx/object_contour_points_2221", 1);
+  }//Fusion ECU Only
+  else
+  {
+  fusion_scan_2204_pub = n.advertise<ibeo_lux_msgs::FusionScanData2204>("parsed_tx/fusion_scan_data_2204", 1);
+  fusion_scan_2205_pub = n.advertise<ibeo_lux_msgs::FusionScanData2205>("parsed_tx/fusion_scan_data_2205", 1);
+  fusion_object_2225_pub = n.advertise<ibeo_lux_msgs::FusionObjectData2225>("parsed_tx/fusion_object_data_2225", 1);
+  fusion_object_2280_pub = n.advertise<ibeo_lux_msgs::FusionObjectData2280>("parsed_tx/fusion_object_data_2280", 1);
+  fusion_img_2403_pub = n.advertise<ibeo_lux_msgs::FusionImage>("parsed_tx/fusion_image_2403", 1);
+  fusion_vehicle_2806_pub = n.advertise<ibeo_lux_msgs::FusionVehicleState2806>("parsed_tx/lux_fusion_vehicle_state_2806", 1);
+  fusion_vehicle_2807_pub = n.advertise<ibeo_lux_msgs::FusionVehicleState2807>("parsed_tx/lux_fusion_vehicle_state_2807", 1);
 
-  ros::Publisher scan_pointcloud_2204_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("as_tx/lux_fusion_point_cloud_2204", 1);
-  ros::Publisher scan_pointcloud_2205_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("as_tx/lux_fusion_point_cloud_2205", 1);
-  ros::Publisher object_markers_2225_pub = n.advertise<visualization_msgs::MarkerArray>("as_tx/object_markers_array_2225", 1);
-  ros::Publisher object_markers_2280_pub = n.advertise<visualization_msgs::MarkerArray>("as_tx/object_markers_array_2280", 1);
+  scan_pointcloud_2204_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("as_tx/lux_fusion_point_cloud_2204", 1);
+  scan_pointcloud_2205_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("as_tx/lux_fusion_point_cloud_2205", 1);
+  object_markers_2225_pub = n.advertise<visualization_msgs::MarkerArray>("as_tx/object_markers_array_2225", 1);
+  object_markers_2280_pub = n.advertise<visualization_msgs::MarkerArray>("as_tx/object_markers_array_2280", 1);
+  }
 
   // Wait for time to be valid
   while (ros::Time::now().nsec == 0);
@@ -374,7 +378,7 @@ int main(int argc, char **argv)
                   
       }
       // ibeo LUX object data
-      if (lux_header_msg.data_type == 0x2221)
+      else if (lux_header_msg.data_type == 0x2221)
       {
         ROS_INFO("reading object data 0x2221");
         visualization_msgs::MarkerArray   object_markers;
@@ -433,7 +437,6 @@ int main(int argc, char **argv)
               scan_object.object_box_size.x, scan_object.object_box_size.y, 0.75);
           object_marker.header.frame_id = frame_id;
           object_marker.id  = scan_object.ID;
-          object_marker.ns = "lux_object_wireframe_2221";
           object_marker.pose.orientation.x = quaternion.x();
           object_marker.pose.orientation.y = quaternion.y();
           object_marker.pose.orientation.z = quaternion.z();
@@ -498,10 +501,13 @@ int main(int argc, char **argv)
               object_marker.color.r = object_marker.color.b = object_marker.color.g = 0.0;
               break;
           }
+
+          object_marker.ns = label;
+          
           visualization_msgs::Marker   object_label;
           object_label.header.frame_id = frame_id;
           object_label.id  = scan_object.ID;
-          object_label.ns = "lux_object_name_2221";
+          object_label.ns = label;
           object_label.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
           object_label.pose.position.x = scan_object.object_box_center.x;
           object_label.pose.position.y = scan_object.object_box_center.y;
@@ -517,21 +523,21 @@ int main(int argc, char **argv)
           object_point_marker.header.frame_id = frame_id;
           object_point_marker.type = visualization_msgs::Marker::POINTS;
           object_point_marker.action = visualization_msgs::Marker::ADD;
-          object_point_marker.ns = "object_2221";
+          object_point_marker.ns = label;
           object_point_marker.points.reserve(scan_object.number_of_contour_points);
           object_point_marker.scale.x = 0.1;
           object_point_marker.scale.y = 0.1;
-          object_point_marker.color.r = 1;
+          object_point_marker.color.r = 0;
           object_point_marker.color.g = 1;
-          object_point_marker.color.b = 1;
+          object_point_marker.color.b = 0;
           object_point_marker.color.a = 0.7;
           scan_object.list_of_contour_points.clear();
           geometry_msgs::Point    dis_object_point;
           for(int j =0; j< scan_object.number_of_contour_points; j++)
           {
             point_tx = object_tx.list_of_contour_points_[k];
-            object_point.x = point_tx.x_;
-            object_point.y = point_tx.y_;
+            object_point.x = 0.01 * point_tx.x_;
+            object_point.y = 0.01 * point_tx.y_;
 
             scan_object.list_of_contour_points.push_back(object_point);
             
@@ -557,7 +563,7 @@ int main(int argc, char **argv)
         object_markers_2221_pub.publish(object_markers);
       }
       //vehicle state 2805
-      if(lux_header_msg.data_type == 0x2805)
+      else if(lux_header_msg.data_type == 0x2805)
       {
         ROS_INFO("reading vehicle state data 0x2805");
         lux_vehicle_state_msg.lux_header  = lux_header_msg;
@@ -585,7 +591,7 @@ int main(int argc, char **argv)
         vehicle_state_pub.publish(lux_vehicle_state_msg);
       }
       // error and warning
-      if(lux_header_msg.data_type == 0x2030)
+      else if(lux_header_msg.data_type == 0x2030)
       {
         ROS_INFO("reading lux errors and warnings data 0x2030");
         lux_error_warning_msg.lux_header  = lux_header_msg;
@@ -603,7 +609,7 @@ int main(int argc, char **argv)
         error_warn_pub.publish(lux_error_warning_msg);
       }
       // Fusion scan data 2204
-      if(lux_header_msg.data_type == 0x2204)
+      else if(lux_header_msg.data_type == 0x2204)
       {       
         ROS_INFO("reading FUSION SYSTEM/ECU scan data 0x2204");
 
@@ -681,7 +687,7 @@ int main(int argc, char **argv)
         scan_pointcloud_2204_pub.publish(pcl_cloud_2204);
       }
       // Fusion scan data 2205
-      if(lux_header_msg.data_type == 0x2205)
+      else if(lux_header_msg.data_type == 0x2205)
       {
         ROS_INFO("reading FUSION SYSTEM/ECU scan data 0x2205");
 
@@ -788,7 +794,7 @@ int main(int argc, char **argv)
         scan_pointcloud_2205_pub.publish(pcl_cloud_2205);
       }
       // Fusion object data 2225
-      if(lux_header_msg.data_type == 0x2225)
+      else if(lux_header_msg.data_type == 0x2225)
       {
         ROS_INFO("reading Fusion object data 0x2225");
         visualization_msgs::MarkerArray   object_markers_2225;
@@ -842,7 +848,6 @@ int main(int argc, char **argv)
               scan_object.object_box_size.x, scan_object.object_box_size.y, 0.75);
           object_marker_2225.header.frame_id = frame_id;
           object_marker_2225.id  = scan_object.ID;
-          object_marker_2225.ns = "object_contour_2225";
           object_marker_2225.lifetime = ros::Duration(0.2);
           object_marker_2225.pose.orientation.x = quaternion.x();
           object_marker_2225.pose.orientation.y = quaternion.y();
@@ -907,6 +912,7 @@ int main(int argc, char **argv)
               object_marker_2225.color.r = object_marker_2225.color.b = object_marker_2225.color.g = 0.0;
               break;
           }
+          object_marker_2225.ns = label;
 
           ibeo_lux_msgs::Float2D object_point;
           Float2D point_tx;
@@ -935,7 +941,7 @@ int main(int argc, char **argv)
         object_markers_2225_pub.publish(object_markers_2225);
       }
       // Fusion object data 2280
-      if(lux_header_msg.data_type == 0x2280)
+      else if(lux_header_msg.data_type == 0x2280)
       {
       
         ROS_INFO("reading Fusion object data 0x2280");
@@ -992,7 +998,6 @@ int main(int argc, char **argv)
               scan_object.object_box_size.x, scan_object.object_box_size.y, 0.75);;
           object_marker_2280.header.frame_id = frame_id;
           object_marker_2280.id  = scan_object.ID;
-          object_marker_2280.ns = "object_box_2280";
           object_marker_2280.lifetime = ros::Duration(0.2);
           object_marker_2280.pose.orientation.x = quaternion.x();
           object_marker_2280.pose.orientation.y = quaternion.y();
@@ -1057,6 +1062,7 @@ int main(int argc, char **argv)
               object_marker_2280.color.r = object_marker_2280.color.b = object_marker_2280.color.g = 0.0;
               break;
           }
+          object_marker_2280.ns = label;
 
           ibeo_lux_msgs::Float2D     object_point;
           Float2D point_tx;
@@ -1065,7 +1071,7 @@ int main(int argc, char **argv)
           object_point_marker.header.frame_id = frame_id;
           object_point_marker.type = visualization_msgs::Marker::POINTS;
           object_point_marker.action = visualization_msgs::Marker::ADD;
-          object_point_marker.ns = "object_contour_2280";
+          object_point_marker.ns = label;
           object_point_marker.points.reserve(scan_object.number_of_contour_points);
           object_point_marker.scale.x = 0.1;
           object_point_marker.scale.y = 0.1;
@@ -1101,7 +1107,7 @@ int main(int argc, char **argv)
         object_markers_2280_pub.publish(object_markers_2280);
       }
       // Fusion image data 2403
-      if(lux_header_msg.data_type == 0x2403)
+      else if(lux_header_msg.data_type == 0x2403)
       {
       
         ROS_INFO("reading FUSION SYSTEM/ECU image 2403");
@@ -1130,7 +1136,7 @@ int main(int argc, char **argv)
         fusion_img_2403_pub.publish(lux_fusion_image_msg);
       }
       //Fusion vehicle state 2806
-      if(lux_header_msg.data_type == 0x2806)
+      else if(lux_header_msg.data_type == 0x2806)
       {
         ROS_INFO("reading Fusion vehicle state data 0x2806");
         lux_vehicle_state_2806_msg.lux_header  = lux_header_msg;
@@ -1160,7 +1166,7 @@ int main(int argc, char **argv)
         fusion_vehicle_2806_pub.publish(lux_vehicle_state_msg);
       }
       //Fusion vehicle state 2807
-      if(lux_header_msg.data_type == 0x2807)
+      else if(lux_header_msg.data_type == 0x2807)
       {
         ROS_INFO("reading Fusion vehicle state data 0x2807");
         lux_vehicle_state_2807_msg.lux_header  = lux_header_msg;
