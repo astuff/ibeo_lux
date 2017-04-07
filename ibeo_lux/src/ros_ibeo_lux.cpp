@@ -914,9 +914,37 @@ int main(int argc, char **argv)
           }
           object_marker_2225.ns = label;
 
+          visualization_msgs::Marker   object_label;
+          object_label.header.frame_id = frame_id;
+          object_label.ns = label;
+          object_label.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+          object_label.action = visualization_msgs::Marker::ADD;
+          object_label.pose.position.x = scan_object.object_box_center.x;
+          object_label.pose.position.y = scan_object.object_box_center.y;
+          object_label.pose.position.z = 0.5;
+          object_label.text = label;
+          object_label.scale.z = 0.2;
+          object_label.lifetime = object_marker_2225.lifetime;
+          object_label.color.r = object_label.color.g = object_label.color.b = 1;
+          object_label.color.a = 0.5;
+          
           ibeo_lux_msgs::Float2D object_point;
           Float2D point_tx;
           scan_object.list_of_contour_points.clear();
+          
+          visualization_msgs::Marker      object_point_marker;
+          object_point_marker.header.frame_id = frame_id;
+          object_point_marker.type = visualization_msgs::Marker::POINTS;
+          object_point_marker.action = visualization_msgs::Marker::ADD;
+          object_point_marker.ns = label;
+          object_point_marker.points.reserve(scan_object.number_of_contour_points);
+          object_point_marker.scale.x = 0.1;
+          object_point_marker.scale.y = 0.1;
+          object_point_marker.color.r = 1;
+          object_point_marker.color.g = 1;
+          object_point_marker.color.b = 1;
+          object_point_marker.color.a = 0.7;
+          
           for(int j =0; j< scan_object.number_of_contour_points; j++)
           {
             point_tx = object_tx.list_of_contour_points_[j];
@@ -927,11 +955,17 @@ int main(int argc, char **argv)
             geometry_msgs::Point    dis_object_point;
             dis_object_point.x = object_point.x;
             dis_object_point.y = object_point.y;
-            object_marker_2225.points.push_back(dis_object_point);
+            object_point_marker.points.push_back(dis_object_point);
           }
 
           object_marker_2225.header.stamp = ros::Time::now();
           object_markers_2225.markers.push_back(object_marker_2225);
+
+          object_point_marker.header.stamp = ros::Time::now();
+          object_markers_2225.markers.push_back(object_point_marker);
+
+          object_label.header.stamp = ros::Time::now();
+          object_markers_2225.markers.push_back(object_label);
         }
 
         lux_fusion_object_2225.header.frame_id = frame_id;
@@ -1064,6 +1098,20 @@ int main(int argc, char **argv)
           }
           object_marker_2280.ns = label;
 
+          visualization_msgs::Marker   object_label;
+          object_label.header.frame_id = frame_id;
+          object_label.ns = label;
+          object_label.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+          object_label.action = visualization_msgs::Marker::ADD;
+          object_label.pose.position.x = scan_object.object_box_center.x;
+          object_label.pose.position.y = scan_object.object_box_center.y;
+          object_label.pose.position.z = 0.5;
+          object_label.text = label;
+          object_label.scale.z = 0.2;
+          object_label.lifetime = object_marker_2280.lifetime;
+          object_label.color.r = object_label.color.g = object_label.color.b = 1;
+          object_label.color.a = 0.5;
+          
           ibeo_lux_msgs::Float2D     object_point;
           Float2D point_tx;
           scan_object.list_of_contour_points.clear();
@@ -1075,9 +1123,9 @@ int main(int argc, char **argv)
           object_point_marker.points.reserve(scan_object.number_of_contour_points);
           object_point_marker.scale.x = 0.1;
           object_point_marker.scale.y = 0.1;
-          object_point_marker.color.r = 1;
+          object_point_marker.color.r = 0;
           object_point_marker.color.g = 1;
-          object_point_marker.color.b = 1;
+          object_point_marker.color.b = 0;
           object_point_marker.color.a = 0.7;
           scan_object.list_of_contour_points.clear();
           geometry_msgs::Point    dis_object_point;
@@ -1100,6 +1148,9 @@ int main(int argc, char **argv)
 
           object_point_marker.header.stamp = ros::Time::now();
           object_markers_2280.markers.push_back(object_point_marker);
+
+          object_label.header.stamp = ros::Time::now();
+          object_markers_2280.markers.push_back(object_label);
         }
 
         fusion_object_2280_pub.publish(lux_fusion_object_2280);
