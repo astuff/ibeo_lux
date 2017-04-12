@@ -1101,6 +1101,7 @@ int main(int argc, char **argv)
           visualization_msgs::Marker   object_label;
           object_label.header.frame_id = frame_id;
           object_label.ns = label;
+          object_label.id = scan_object.ID + 1000;
           object_label.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
           object_label.action = visualization_msgs::Marker::ADD;
           object_label.pose.position.x = scan_object.object_box_center.x;
@@ -1119,6 +1120,7 @@ int main(int argc, char **argv)
           object_point_marker.header.frame_id = frame_id;
           object_point_marker.type = visualization_msgs::Marker::POINTS;
           object_point_marker.action = visualization_msgs::Marker::ADD;
+          object_point_marker.lifetime = object_marker_2280.lifetime;
           object_point_marker.ns = label;
           object_point_marker.points.reserve(scan_object.number_of_contour_points);
           object_point_marker.scale.x = 0.1;
