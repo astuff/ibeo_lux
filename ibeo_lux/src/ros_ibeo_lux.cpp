@@ -517,7 +517,7 @@ int main(int argc, char **argv)
           object_label.pose.position.y = scan_object.object_box_center.y;
           object_label.pose.position.z = 0.5;
           object_label.text = label;
-          object_label.scale.z = 0.2;
+          object_label.scale.z = 0.5;
           object_label.lifetime = object_marker.lifetime;
           object_label.color.r = object_label.color.g = object_label.color.b = 1;
           object_label.color.a = 0.5;
@@ -920,13 +920,14 @@ int main(int argc, char **argv)
           visualization_msgs::Marker   object_label;
           object_label.header.frame_id = frame_id;
           object_label.ns = label;
+          object_label.id = scan_object.ID + 1000;
           object_label.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
           object_label.action = visualization_msgs::Marker::ADD;
           object_label.pose.position.x = scan_object.object_box_center.x;
           object_label.pose.position.y = scan_object.object_box_center.y;
           object_label.pose.position.z = 0.5;
           object_label.text = label;
-          object_label.scale.z = 0.2;
+          object_label.scale.z = 0.5;
           object_label.lifetime = object_marker_2225.lifetime;
           object_label.color.r = object_label.color.g = object_label.color.b = 1;
           object_label.color.a = 0.5;
@@ -1111,7 +1112,7 @@ int main(int argc, char **argv)
           object_label.pose.position.y = scan_object.object_box_center.y;
           object_label.pose.position.z = 0.5;
           object_label.text = label;
-          object_label.scale.z = 0.2;
+          object_label.scale.z = 0.5;
           object_label.lifetime = object_marker_2280.lifetime;
           object_label.color.r = object_label.color.g = object_label.color.b = 1;
           object_label.color.a = 0.5;
