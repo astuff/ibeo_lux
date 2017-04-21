@@ -189,7 +189,9 @@ int main(int argc, char **argv)
 
   // Advertise messages to send
   ros::Publisher raw_tcp_pub = n.advertise<network_interface::TCPFrame>("tcp_tx", 1);
-  ros::Publisher scan_data_pub, object_data_pub, vehicle_state_pub, error_warn_pub, scan_pointcloud_2202_pub, object_markers_2221_pub, object_marker_2221_pub;
+  ros::Publisher pointcloud_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("as_tx/point_cloud", 1);
+
+  ros::Publisher scan_data_pub, object_data_pub, vehicle_state_pub, error_warn_pub, object_markers_2221_pub, object_marker_2221_pub;
   ros::Publisher fusion_scan_2204_pub, fusion_scan_2205_pub, fusion_object_2225_pub, fusion_object_2280_pub, fusion_img_2403_pub, fusion_vehicle_2806_pub, fusion_vehicle_2807_pub;
   ros::Publisher scan_pointcloud_2204_pub, scan_pointcloud_2205_pub, object_markers_2225_pub, object_markers_2280_pub;
 
@@ -201,7 +203,6 @@ int main(int argc, char **argv)
   vehicle_state_pub = n.advertise<ibeo_lux_msgs::LuxVehicleState>("parsed_tx/lux_vehicle_state", 1);
   error_warn_pub = n.advertise<ibeo_lux_msgs::LuxErrorWarning>("parsed_tx/lux_error_warning", 1);
 
-  scan_pointcloud_2202_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("as_tx/lux_point_cloud_2202", 1);
   object_markers_2221_pub = n.advertise<visualization_msgs::MarkerArray>("as_tx/object_markers_array_2221", 1);
   object_marker_2221_pub = n.advertise<visualization_msgs::Marker>("as_tx/object_contour_points_2221", 1);
   }//Fusion ECU Only
@@ -215,8 +216,6 @@ int main(int argc, char **argv)
   fusion_vehicle_2806_pub = n.advertise<ibeo_lux_msgs::FusionVehicleState2806>("parsed_tx/lux_fusion_vehicle_state_2806", 1);
   fusion_vehicle_2807_pub = n.advertise<ibeo_lux_msgs::FusionVehicleState2807>("parsed_tx/lux_fusion_vehicle_state_2807", 1);
 
-  scan_pointcloud_2204_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("as_tx/lux_fusion_point_cloud_2204", 1);
-  scan_pointcloud_2205_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("as_tx/lux_fusion_point_cloud_2205", 1);
   object_markers_2225_pub = n.advertise<visualization_msgs::MarkerArray>("as_tx/object_markers_array_2225", 1);
   object_markers_2280_pub = n.advertise<visualization_msgs::MarkerArray>("as_tx/object_markers_array_2280", 1);
   }
@@ -254,7 +253,7 @@ int main(int argc, char **argv)
   return_statuses status = tcp_interface.open(ip_address.c_str(), port);
   if(status == ok)
   {
-    ROS_INFO("LUX connected");
+    ROS_INFO("%s connected", (is_fusion)? "Lux Fusion" : "Lux");
     // Loop as long as module should run
     
     unsigned char head_msg[LUX_HEADER_SIZE]; 
@@ -378,7 +377,7 @@ int main(int argc, char **argv)
 
         pcl_cloud_2202.header.frame_id = frame_id;
         pcl_conversions::toPCL(ros::Time::now(), pcl_cloud_2202.header.stamp);
-        scan_pointcloud_2202_pub.publish(pcl_cloud_2202);
+        pointcloud_pub.publish(pcl_cloud_2202);
                   
       }
       // ibeo LUX object data
@@ -688,7 +687,7 @@ int main(int argc, char **argv)
 
         pcl_cloud_2204.header.frame_id = frame_id;
         pcl_conversions::toPCL(ros::Time::now(), pcl_cloud_2204.header.stamp);
-        scan_pointcloud_2204_pub.publish(pcl_cloud_2204);
+        pointcloud_pub.publish(pcl_cloud_2204);
       }
       // Fusion scan data 2205
       else if(is_fusion && lux_header_msg.data_type == 0x2205)
@@ -795,7 +794,7 @@ int main(int argc, char **argv)
 
         pcl_cloud_2205.header.frame_id = frame_id;
         pcl_conversions::toPCL(ros::Time::now(), pcl_cloud_2205.header.stamp);
-        scan_pointcloud_2205_pub.publish(pcl_cloud_2205);
+        pointcloud_pub.publish(pcl_cloud_2205);
       }
       // Fusion object data 2225
       else if(is_fusion && lux_header_msg.data_type == 0x2225)
