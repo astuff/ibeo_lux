@@ -1188,6 +1188,8 @@ int main(int argc, char **argv)
         lux_fusion_image_msg.compress_size = fusion_image_tx.compress_size_;
         lux_fusion_image_msg.image_bytes = fusion_image_tx.image_bytes_; 
         
+        lux_fusion_image_msg.header.frame_id = frame_id;
+        lux_fusion_image_msg.header.stamp = ros::Time::now();
         fusion_img_2403_pub.publish(lux_fusion_image_msg);
       }
       //Fusion vehicle state 2806
