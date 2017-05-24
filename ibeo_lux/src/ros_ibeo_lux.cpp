@@ -249,6 +249,7 @@ int main(int argc, char **argv)
   return_statuses status = tcp_interface.open(ip_address.c_str(), port);
   if(status == ok)
   {
+    ros::Rate loop_rate = (is_fusion)? ros::Rate(970) : ros::Rate(40);
     ROS_INFO("%s connected", (is_fusion)? "Lux Fusion" : "Lux");
     // Loop as long as module should run
     
@@ -1253,6 +1254,8 @@ int main(int argc, char **argv)
         lux_vehicle_state_2807_msg.header.stamp = ros::Time::now();
         fusion_vehicle_2807_pub.publish(lux_vehicle_state_2807_msg);
       }
+      ros::spinOnce();
+      loop_rate.sleep();
     }
   }
   else
