@@ -249,7 +249,7 @@ int main(int argc, char **argv)
   return_statuses status = tcp_interface.open(ip_address.c_str(), port);
   if(status == ok)
   {
-    ros::Rate loop_rate = (is_fusion)? ros::Rate(970) : ros::Rate(40);
+    ros::Rate loop_rate = (is_fusion)? ros::Rate(1000) : ros::Rate(40);
     ROS_INFO("%s connected", (is_fusion)? "Lux Fusion" : "Lux");
     // Loop as long as module should run
     
