@@ -246,29 +246,34 @@ int main(int argc, char **argv)
   FusionImage_TX_Message fusion_image_tx;
   FusionVehicleState2806_TX_Message fusion_vehicle_state_2806_tx;
   FusionVehicleState2807_TX_Message fusion_vehicle_state_2807_tx;
+
   return_statuses status = tcp_interface.open(ip_address.c_str(), port);
-  if(status == ok)
+
+  if(status == OK)
   {
     ros::Rate loop_rate = (is_fusion)? ros::Rate(1100) : ros::Rate(40);
     ROS_INFO("%s connected", (is_fusion)? "Lux Fusion" : "Lux");
     // Loop as long as module should run
     
     unsigned char head_msg[LUX_HEADER_SIZE]; 
+
     if(is_fusion)
     {
       unsigned char set_filter_cmd[32] = {0xaf, 0xfe, 0xc0, 0xc2, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x20, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x02, 0x00, 0x00, 0xff,0xff};
-      status = tcp_interface.send(set_filter_cmd, sizeof(set_filter_cmd));
+      status = tcp_interface.write(set_filter_cmd, sizeof(set_filter_cmd));
     }
-    while (ros::ok())
+
+    while (ros::ok() && status == OK)
     {
       status = tcp_interface.read_exactly(head_msg, sizeof(head_msg), LUX_HEADER_SIZE);
       int offset = header_tx.parse(head_msg);
+
       if(offset > 0)
       {
         ROS_WARN("LUX/LUX Fusion TCP Data out of sync. Offset by %d bytes", offset);
         unsigned char temparray[LUX_HEADER_SIZE];
         memcpy(temparray, head_msg + offset, (LUX_HEADER_SIZE - offset) * sizeof(char));
-        status = tcp_interface.read_exactly(head_msg,sizeof(head_msg), offset);
+        status = tcp_interface.read_exactly(head_msg, sizeof(head_msg), offset);
         memcpy(temparray + LUX_HEADER_SIZE - offset, head_msg, offset * sizeof(char));
         memcpy(head_msg, temparray, LUX_HEADER_SIZE * sizeof(char));
       }
@@ -279,10 +284,12 @@ int main(int argc, char **argv)
       tcp_raw_msg.address = ip_address;
       tcp_raw_msg.port = port;
       tcp_raw_msg.data.clear();
+
       for(int i = 0; i < LUX_HEADER_SIZE; i++)
       {
         tcp_raw_msg.data.push_back(head_msg[i]);
       }
+
       for(int i = 0; i < header_tx.message_size_; i++)
       {
         tcp_raw_msg.data.push_back(data_msg[i]);
@@ -764,6 +771,7 @@ int main(int argc, char **argv)
         ibeo_lux_msgs::FusionScanPoint  scan_point_2205;
         FusionScanPoint  point_tx;
         lux_fusion_scan_2205.scan_point_list.clear();
+        
         for(int k = 0; k < lux_fusion_scan_2205.num_scan_pts; k++)
         {
           point_tx = fusion_scan_data_2205_tx.scan_point_list_[k];
@@ -811,6 +819,7 @@ int main(int argc, char **argv)
         ibeo_lux_msgs::FusionObject2225 scan_object;
         FusionObject2225 object_tx;
         lux_fusion_object_2225.objects.clear();
+
         for(int k = 0; k < lux_fusion_object_2225.num_of_objects; k++)
         {
           object_tx = fusion_object_data_2225_tx.objects_[k];
@@ -1260,9 +1269,14 @@ int main(int argc, char **argv)
   }
   else
   {
-    ROS_ERROR("Connection to LUX could not be opened");
+    ROS_ERROR("Connection to LUX could not be opened. Error number %i", status);
   }
-  tcp_interface.close();
+
+  status = tcp_interface.close();
+
+  if (status != OK)
+    ROS_ERROR("Closing the connection to the LUX failed. Error number %i", status);
+
   return 0;
 }
 
