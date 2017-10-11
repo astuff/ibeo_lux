@@ -59,8 +59,10 @@
 #include <sensor_msgs/PointCloud.h>
 #include <visualization_msgs/MarkerArray.h>
 
-using namespace std;
+using std::string;
+using std::vector;
 using namespace AS::Network;
+using namespace AS::Drivers::IbeoLux;
 
 TCPInterface tcp_interface;
 
