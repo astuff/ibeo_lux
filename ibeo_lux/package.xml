@@ -1,17 +1,18 @@
 <?xml version="1.0"?>
 <package>
   <name>ibeo_lux</name>
-  <version>1.6.0</version>
+  <version>2.0.0</version>
   <description>ROS driver for IBEO LUX</description>
   <license>LGPLv2.1</license>
 
   <maintainer email="software@autonomoustuff.com">AutonomouStuff Software Development Team</maintainer>
+  <author email="jkale@autonomoustuff.com">Joe Kale</author>
+  <author email="jwhitley@autonomoustuff.com">Joshua Whitley</author>
 
   <url type="bugtracker">https://bitbucket.org/autonomoustuff/ros_ibeo_lux/issues</url>
   <url type="repository">https://bitbucket.org/autonomoustuff/ros_ibeo_lux</url>
 
-  <author email="jkale@autonomoustuff.com">Joe Kale</author>
-  <author email="jwhitley@autonomoustuff.com">Joshua Whitley</author>
+  <buildtool_depend>catkin</buildtool_depend>
 
   <build_depend>roscpp</build_depend>
   <build_depend>std_msgs</build_depend>
@@ -20,8 +21,6 @@
   <build_depend>visualization_msgs</build_depend>
   <build_depend>network_interface</build_depend>
   <build_depend>ibeo_lux_msgs</build_depend>
-
-  <buildtool_depend>catkin</buildtool_depend>
 
   <run_depend>roscpp</run_depend>
   <run_depend>std_msgs</run_depend>
