@@ -1,20 +1,20 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="veh_frame_id" default="base_link"/>
-    <arg name="lux_frame_id" default="ibeo_lux"/>
-    <arg name="is_fusion_ecu" default="false"/>
-    <arg name="name" default="ibeo_lux"/>
-    <arg name="ip_address" default="192.168.0.1" />
-    <arg name="port" default="12002" />
+  <arg name="veh_frame_id" default="base_link"/>
+  <arg name="lux_frame_id" default="ibeo_lux"/>
+  <arg name="is_fusion_ecu" default="false"/>
+  <arg name="name" default="ibeo_lux"/>
+  <arg name="ip_address" default="192.168.0.1" />
+  <arg name="port" default="12002" />
 
-    <node pkg="tf" type="static_transform_publisher" name="$(arg veh_frame_id)_to_$(arg lux_frame_id)" args="0 0 0 0 0 0 $(arg veh_frame_id) $(arg lux_frame_id) 100"/>
+  <node pkg="tf" type="static_transform_publisher" name="$(arg veh_frame_id)_to_$(arg lux_frame_id)" args="0 0 0 0 0 0 $(arg veh_frame_id) $(arg lux_frame_id) 100"/>
 
-    <include file="$(find ibeo_lux)/launch/ibeo_lux.launch">
-        <arg name="ip_address" value="$(arg ip_address)"/>
-        <arg name="port" value="$(arg port)"/>
-        <arg name="lux_frame_id" value="$(arg lux_frame_id)"/>           
-        <arg name="is_fusion" value="$(arg is_fusion_ecu)"/>           
-        <arg name="name" value="$(arg name)"/>           
-    </include>
+  <include file="$(find ibeo_lux)/launch/ibeo_lux.launch">
+    <arg name="ip_address" value="$(arg ip_address)"/>
+    <arg name="port" value="$(arg port)"/>
+    <arg name="lux_frame_id" value="$(arg lux_frame_id)"/>           
+    <arg name="is_fusion" value="$(arg is_fusion_ecu)"/>           
+    <arg name="name" value="$(arg name)"/>           
+  </include>
 </launch>
 

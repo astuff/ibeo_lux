@@ -1,16 +1,16 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="lux_frame_id" default="ibeo_lux"/>
-    <arg name="is_fusion" default="false"/>
-    <arg name="name" default="ibeo_lux"/>
-    <arg name="ip_address" default="192.168.0.1"/>
-    <arg name="port" default="12002"/>
+  <arg name="lux_frame_id" default="ibeo_lux"/>
+  <arg name="is_fusion" default="false"/>
+  <arg name="name" default="ibeo_lux"/>
+  <arg name="ip_address" default="192.168.0.1"/>
+  <arg name="port" default="12002"/>
 
-    <node pkg="ibeo_lux" type="ibeo_lux" name="$(arg name)">
-      <param name="ip_address" value="$(arg ip_address)"/>
-      <param name="port" type="int" value="$(arg port)"/>
-      <param name="sensor_frame_id" value="$(arg lux_frame_id)"/>           
-      <param name="is_fusion" type="bool" value="$(arg is_fusion)"/>           
-    </node>
+  <node pkg="ibeo_lux" type="ibeo_lux" name="$(arg name)">
+    <param name="ip_address" value="$(arg ip_address)"/>
+    <param name="port" type="int" value="$(arg port)"/>
+    <param name="sensor_frame_id" value="$(arg lux_frame_id)"/>           
+    <param name="is_fusion" type="bool" value="$(arg is_fusion)"/>           
+  </node>
 </launch>
 
