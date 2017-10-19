@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(ibeo_lux)
 
-# add_definitions(-std=c++11 -Wall -Wextra -DBUILD_ROS)
+add_definitions(-std=c++11 -Wall -Wextra -DBUILD_ROS)
 
 ## Find catkin and any catkin packages
 find_package(catkin REQUIRED COMPONENTS
