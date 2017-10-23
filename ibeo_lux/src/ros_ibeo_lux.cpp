@@ -268,19 +268,12 @@ int main(int argc, char **argv)
       if (is_fusion)
         fusion_filter_sent = false;
 
-      while ((status = tcp_interface.open(ip_address.c_str(), port)) != OK)
-      {
+      status = tcp_interface.open(ip_address.c_str(), port);
+
+      if (status != OK)
         ROS_WARN("Ibeo LUX - Unable to connect to sensor at %s: %d - %s", ip_address.c_str(), status, return_status_desc(status).c_str());
 
-        if (!ros::ok())
-        {
-          return -1;
-        }
-
-        ros::Duration(1.0).sleep();
-      }
-
-      ROS_INFO("Ibeo LUX - %s connected", (is_fusion) ? "LUX Fusion" : "LUX");
+      ros::Duration(1.0).sleep();
     }
     else
     {
@@ -341,7 +334,7 @@ int main(int argc, char **argv)
 
       if(!is_fusion && lux_header_msg.data_type == LuxScanData_TX_Message::DATA_TYPE)
       {
-        ROS_INFO("Ibeo LUX - Reading scan data 0x2202");
+        ROS_DEBUG("Ibeo LUX - Reading scan data 0x2202");
 
         pcl::PointCloud <pcl::PointXYZL> pcl_cloud_2202;
         pcl::PointXYZL cloud_point_2202;
