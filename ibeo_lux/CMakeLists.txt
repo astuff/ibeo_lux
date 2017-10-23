@@ -26,12 +26,12 @@ catkin_package(CATKIN_DEPENDS
 
 ## Build executables
 include_directories(
-  core_ibeo_lux/include
+  core_ibeo/include
   ${catkin_INCLUDE_DIRS}
 )
 
 add_executable(${PROJECT_NAME}
-  core_ibeo_lux/src/core_ibeo_lux.cpp
+  core_ibeo/src/ibeo_core.cpp
   src/ros_ibeo_lux.cpp
 )
 
