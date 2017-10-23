@@ -11,7 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   geometry_msgs
   visualization_msgs
-  ibeo_lux_msgs
+  ibeo_msgs
 )
 
 ## Declare a catkin package
@@ -21,7 +21,7 @@ catkin_package(CATKIN_DEPENDS
   pcl_ros
   geometry_msgs
   visualization_msgs
-  ibeo_lux_msgs
+  ibeo_msgs
 )
 
 ## Build executables

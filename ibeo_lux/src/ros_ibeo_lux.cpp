@@ -33,26 +33,26 @@
 //Tx
 #include <network_interface/TCPFrame.h>
 
-#include <ibeo_lux_msgs/LuxHeader.h>
-// single lux
-#include <ibeo_lux_msgs/LuxErrorWarning.h>
-#include <ibeo_lux_msgs/LuxObject.h>
-#include <ibeo_lux_msgs/LuxObjectData.h>
-#include <ibeo_lux_msgs/LuxVehicleState.h>
-#include <ibeo_lux_msgs/LuxScanData.h>
+#include <ibeo_msgs/IbeoDataHeader.h>
+#include <ibeo_msgs/CameraImage.h>
+#include <ibeo_msgs/ErrorWarning.h>
+#include <ibeo_msgs/ScanData2202.h>
+#include <ibeo_msgs/ScanPoint2204.h>
+#include <ibeo_msgs/ScannerInfo2204.h>
+#include <ibeo_msgs/ScanData2204.h>
+#include <ibeo_msgs/ScanPoint2205.h>
+#include <ibeo_msgs/ScannerInfo2205.h>
+#include <ibeo_msgs/ScanData2205.h>
+#include <ibeo_msgs/Object2221.h>
+#include <ibeo_msgs/ObjectData2221.h>
+#include <ibeo_msgs/Object2225.h>
+#include <ibeo_msgs/ObjectData2225.h>
+#include <ibeo_msgs/Object2280.h>
+#include <ibeo_msgs/ObjectData2280.h>
+#include <ibeo_msgs/HostVehicleState2805.h>
+#include <ibeo_msgs/HostVehicleState2806.h>
+#include <ibeo_msgs/HostVehicleState2807.h>
 
-#include <ibeo_lux_msgs/FusionScanData2204.h>
-#include <ibeo_lux_msgs/FusionScanInfo2204.h>
-#include <ibeo_lux_msgs/FusionScanData2205.h>
-#include <ibeo_lux_msgs/FusionScanInfo2205.h>
-#include <ibeo_lux_msgs/FusionScanPoint.h>
-#include <ibeo_lux_msgs/FusionObjectData2225.h>
-#include <ibeo_lux_msgs/FusionObject2225.h>
-#include <ibeo_lux_msgs/FusionObjectData2280.h>
-#include <ibeo_lux_msgs/FusionObject2280.h>
-#include <ibeo_lux_msgs/FusionImage.h>
-#include <ibeo_lux_msgs/FusionVehicleState2806.h>
-#include <ibeo_lux_msgs/FusionVehicleState2807.h>
 // supplemental objects/messages
 
 #include <geometry_msgs/Point.h>
@@ -65,6 +65,11 @@ using namespace AS::Network;
 using namespace AS::Drivers::Ibeo;
 
 TCPInterface tcp_interface;
+
+ros::Time ntp_to_ros_time(NTPTime time)
+{
+  return ros::Time(((time & 0xFFFF0000) >> 32), (time & 0x0000FFFF));
+}
 
 visualization_msgs::Marker createWireframeMarker(float center_x, float center_y, float size_x, float size_y, float size_z)
 {
@@ -206,37 +211,37 @@ int main(int argc, char **argv)
   //LUX Sensor Only
   if(!is_fusion)
   {
-    scan_data_pub = n.advertise<ibeo_lux_msgs::LuxScanData>("parsed_tx/lux_scan_data", 1);
-    object_data_pub = n.advertise<ibeo_lux_msgs::LuxObjectData>("parsed_tx/lux_object_data", 1);
-    vehicle_state_pub = n.advertise<ibeo_lux_msgs::LuxVehicleState>("parsed_tx/lux_vehicle_state", 1);
-    error_warn_pub = n.advertise<ibeo_lux_msgs::LuxErrorWarning>("parsed_tx/lux_error_warning", 1);
+    scan_data_pub = n.advertise<ibeo_msgs::ScanData2202>("parsed_tx/lux_scan_data", 1);
+    object_data_pub = n.advertise<ibeo_msgs::ObjectData2221>("parsed_tx/lux_object_data", 1);
+    vehicle_state_pub = n.advertise<ibeo_msgs::HostVehicleState2805>("parsed_tx/lux_vehicle_state", 1);
+    error_warn_pub = n.advertise<ibeo_msgs::ErrorWarning>("parsed_tx/lux_error_warning", 1);
   }
   else //Fusion ECU Only
   {
-    fusion_scan_2204_pub = n.advertise<ibeo_lux_msgs::FusionScanData2204>("parsed_tx/fusion_scan_data_2204", 1);
-    fusion_scan_2205_pub = n.advertise<ibeo_lux_msgs::FusionScanData2205>("parsed_tx/fusion_scan_data_2205", 1);
-    fusion_object_2225_pub = n.advertise<ibeo_lux_msgs::FusionObjectData2225>("parsed_tx/fusion_object_data_2225", 1);
-    fusion_object_2280_pub = n.advertise<ibeo_lux_msgs::FusionObjectData2280>("parsed_tx/fusion_object_data_2280", 1);
-    fusion_img_2403_pub = n.advertise<ibeo_lux_msgs::FusionImage>("parsed_tx/fusion_image_2403", 1);
-    fusion_vehicle_2806_pub = n.advertise<ibeo_lux_msgs::FusionVehicleState2806>("parsed_tx/lux_fusion_vehicle_state_2806", 1);
-    fusion_vehicle_2807_pub = n.advertise<ibeo_lux_msgs::FusionVehicleState2807>("parsed_tx/lux_fusion_vehicle_state_2807", 1);
+    fusion_scan_2204_pub = n.advertise<ibeo_msgs::ScanData2204>("parsed_tx/fusion_scan_data_2204", 1);
+    fusion_scan_2205_pub = n.advertise<ibeo_msgs::ScanData2205>("parsed_tx/fusion_scan_data_2205", 1);
+    fusion_object_2225_pub = n.advertise<ibeo_msgs::ObjectData2225>("parsed_tx/fusion_object_data_2225", 1);
+    fusion_object_2280_pub = n.advertise<ibeo_msgs::ObjectData2280>("parsed_tx/fusion_object_data_2280", 1);
+    fusion_img_2403_pub = n.advertise<ibeo_msgs::CameraImage>("parsed_tx/fusion_image_2403", 1);
+    fusion_vehicle_2806_pub = n.advertise<ibeo_msgs::HostVehicleState2806>("parsed_tx/lux_fusion_vehicle_state_2806", 1);
+    fusion_vehicle_2807_pub = n.advertise<ibeo_msgs::HostVehicleState2807>("parsed_tx/lux_fusion_vehicle_state_2807", 1);
   }
 
   // Wait for time to be valid
   while (ros::Time::now().nsec == 0);
 
-  ibeo_lux_msgs::LuxHeader lux_header_msg;
-  ibeo_lux_msgs::LuxScanData lux_scan_msg;
-  ibeo_lux_msgs::LuxObjectData lux_object_msg;
-  ibeo_lux_msgs::LuxVehicleState lux_vehicle_state_msg;
-  ibeo_lux_msgs::LuxErrorWarning lux_error_warning_msg;
-  ibeo_lux_msgs::FusionScanData2204 lux_fusion_scan_2204;
-  ibeo_lux_msgs::FusionScanData2205 lux_fusion_scan_2205;
-  ibeo_lux_msgs::FusionObjectData2225 lux_fusion_object_2225;
-  ibeo_lux_msgs::FusionObjectData2280 lux_fusion_object_2280;
-  ibeo_lux_msgs::FusionImage lux_fusion_image_msg;
-  ibeo_lux_msgs::FusionVehicleState2806 lux_vehicle_state_2806_msg;
-  ibeo_lux_msgs::FusionVehicleState2807 lux_vehicle_state_2807_msg;
+  ibeo_msgs::IbeoDataHeader lux_header_msg;
+  ibeo_msgs::ScanData2202 lux_scan_msg;
+  ibeo_msgs::ObjectData2221 lux_object_msg;
+  ibeo_msgs::HostVehicleState2805 lux_vehicle_state_msg;
+  ibeo_msgs::ErrorWarning lux_error_warning_msg;
+  ibeo_msgs::ScanData2204 lux_fusion_scan_2204;
+  ibeo_msgs::ScanData2205 lux_fusion_scan_2205;
+  ibeo_msgs::ObjectData2225 lux_fusion_object_2225;
+  ibeo_msgs::ObjectData2280 lux_fusion_object_2280;
+  ibeo_msgs::CameraImage lux_fusion_image_msg;
+  ibeo_msgs::HostVehicleState2806 lux_vehicle_state_2806_msg;
+  ibeo_msgs::HostVehicleState2807 lux_vehicle_state_2807_msg;
   
   network_interface::TCPFrame tcp_raw_msg;
 
@@ -333,16 +338,16 @@ int main(int argc, char **argv)
 
       lux_header_msg.message_size = header_tx.message_size;
       lux_header_msg.device_id = header_tx.device_id;
-      lux_header_msg.data_type = header_tx.data_type_id;
+      lux_header_msg.data_type_id = header_tx.data_type_id;
 
-      if(!is_fusion && lux_header_msg.data_type == ScanData2202::DATA_TYPE)
+      if(!is_fusion && lux_header_msg.data_type_id == ScanData2202::DATA_TYPE)
       {
         ROS_DEBUG("Ibeo LUX - Reading scan data 0x2202");
 
         pcl::PointCloud <pcl::PointXYZL> pcl_cloud_2202;
         pcl::PointXYZL cloud_point_2202;
         
-        lux_scan_msg.lux_header = lux_header_msg;
+        lux_scan_msg.ibeo_header = lux_header_msg;
 
         // header needs to be set before parse since the offset that the
         // tx message uses is contained in the header.
@@ -351,47 +356,52 @@ int main(int argc, char **argv)
         lux_scan_data_tx.parse(data_msg);
 
         lux_scan_msg.scan_number = lux_scan_data_tx.scan_number;
-        lux_scan_msg.scan_status = lux_scan_data_tx.scanner_status;
+        lux_scan_msg.scanner_status = lux_scan_data_tx.scanner_status;
         lux_scan_msg.sync_phase_offset = lux_scan_data_tx.sync_phase_offset;
-        lux_scan_msg.scan_start_time = lux_scan_data_tx.scan_start_time;
-        lux_scan_msg.scan_end_time = lux_scan_data_tx.scan_end_time;
-        lux_scan_msg.angle_ticks = lux_scan_data_tx.angle_ticks_per_rotation;
-        lux_scan_msg.start_angle = lux_scan_data_tx.start_angle_ticks;
-        lux_scan_msg.end_angle = lux_scan_data_tx.end_angle_ticks;
-        lux_scan_msg.num_scan_pts = lux_scan_data_tx.scan_points_count;
-        lux_scan_msg.mounting_yaw_angle = lux_scan_data_tx.mounting_yaw_angle_ticks;
-        lux_scan_msg.mounting_pitch_angle = lux_scan_data_tx.mounting_pitch_angle_ticks;
-        lux_scan_msg.mounting_roll_angle = lux_scan_data_tx.mounting_roll_angle_ticks;
+        lux_scan_msg.scan_start_time = ntp_to_ros_time(lux_scan_data_tx.scan_start_time);
+        lux_scan_msg.scan_end_time = ntp_to_ros_time(lux_scan_data_tx.scan_end_time);
+        lux_scan_msg.angle_ticks_per_rotation = lux_scan_data_tx.angle_ticks_per_rotation;
+        lux_scan_msg.start_angle_ticks = lux_scan_data_tx.start_angle_ticks;
+        lux_scan_msg.end_angle_ticks = lux_scan_data_tx.end_angle_ticks;
+        lux_scan_msg.scan_points_count = lux_scan_data_tx.scan_points_count;
+        lux_scan_msg.mounting_yaw_angle_ticks = lux_scan_data_tx.mounting_yaw_angle_ticks;
+        lux_scan_msg.mounting_pitch_angle_ticks = lux_scan_data_tx.mounting_pitch_angle_ticks;
+        lux_scan_msg.mounting_roll_angle_ticks = lux_scan_data_tx.mounting_roll_angle_ticks;
         lux_scan_msg.mounting_position_x = lux_scan_data_tx.mounting_position_x;
         lux_scan_msg.mounting_position_y = lux_scan_data_tx.mounting_position_y;
         lux_scan_msg.mounting_position_z = lux_scan_data_tx.mounting_position_z;
-        //TODO: Look at message for flags.
-        //lux_scan_msg.scan_flags = lux_scan_data_tx.scan_flags_;
+        lux_scan_msg.ground_labeled = lux_scan_data_tx.ground_labeled;
+        lux_scan_msg.dirt_labeled = lux_scan_data_tx.dirt_labeled;
+        lux_scan_msg.rain_labeled = lux_scan_data_tx.rain_labeled;
+        lux_scan_msg.mirror_side = static_cast<uint8_t>(lux_scan_data_tx.mirror_side);
 
-        pcl_cloud_2202.reserve(lux_scan_msg.num_scan_pts);
-        lux_scan_msg.scan_points.clear();
+        pcl_cloud_2202.reserve(lux_scan_msg.scan_points_count);
+        lux_scan_msg.scan_point_list.clear();
 
-        ibeo_lux_msgs::ScanPoint msg_point;
+        ibeo_msgs::ScanPoint2202 msg_point;
         ScanPoint2202 tx_point;
 
-        for(unsigned int k = 0; k < lux_scan_msg.num_scan_pts; k++)
+        for(unsigned int k = 0; k < lux_scan_msg.scan_points_count; k++)
         {
           tx_point = lux_scan_data_tx.scan_point_list[k];
           msg_point.layer = tx_point.layer;
           msg_point.echo = tx_point.echo;
-          //TODO: Fix flags
-          //msg_point.flags = tx_point.flags_;
+          msg_point.transparent_point = tx_point.transparent_point;
+          msg_point.clutter_atmospheric = tx_point.clutter_atmospheric;
+          msg_point.ground = tx_point.ground;
+          msg_point.dirt = tx_point.dirt;
           msg_point.horizontal_angle = tx_point.horizontal_angle;
           msg_point.radial_distance = tx_point.radial_distance;
           msg_point.echo_pulse_width = tx_point.echo_pulse_width;
           
-          lux_scan_msg.scan_points.push_back(msg_point);
+          lux_scan_msg.scan_point_list.push_back(msg_point);
           
-          //cloud_point_2202.label = msg_point.flags;
-
           // filter out flagged points
-          //if(!(msg_point.flags & 0x0F))
-          //{
+          if(!msg_point.transparent_point &&
+             !msg_point.clutter_atmospheric &&
+             !msg_point.ground &&
+             !msg_point.dirt)
+          {
             double phi;
             switch (msg_point.layer)
             {
@@ -402,12 +412,12 @@ int main(int argc, char **argv)
               default: phi = 0.0; break;
             }
 
-            cloud_point_2202.x = (double)msg_point.radial_distance / 100 * cos(ticks_to_angle(msg_point.horizontal_angle,lux_scan_msg.angle_ticks)) * cos(phi);
-            cloud_point_2202.y = (double)msg_point.radial_distance / 100 * sin(ticks_to_angle(msg_point.horizontal_angle,lux_scan_msg.angle_ticks)) * cos(phi);
+            cloud_point_2202.x = (double)msg_point.radial_distance / 100 * cos(ticks_to_angle(msg_point.horizontal_angle, lux_scan_msg.angle_ticks_per_rotation)) * cos(phi);
+            cloud_point_2202.y = (double)msg_point.radial_distance / 100 * sin(ticks_to_angle(msg_point.horizontal_angle, lux_scan_msg.angle_ticks_per_rotation)) * cos(phi);
             cloud_point_2202.z = (double)msg_point.radial_distance / 100 * sin(phi);
 
             pcl_cloud_2202.points.push_back(cloud_point_2202);
-          //}
+          }
         }
 
         lux_scan_msg.header.frame_id = frame_id;
@@ -419,30 +429,29 @@ int main(int argc, char **argv)
         pointcloud_pub.publish(pcl_cloud_2202);
                   
       }
-      // ibeo LUX object data
-      else if (!is_fusion && lux_header_msg.data_type == ObjectData2221::DATA_TYPE)
+      else if (!is_fusion && lux_header_msg.data_type_id == ObjectData2221::DATA_TYPE)
       {
         //ROS_DEBUG("Ibeo LUX - Reading object data 0x2221");
-        visualization_msgs::MarkerArray   object_markers;
+        visualization_msgs::MarkerArray object_markers;
 
-        lux_object_msg.lux_header = lux_header_msg;
+        lux_object_msg.ibeo_header = lux_header_msg;
 
         //lux_object_data_tx.header_ = header_tx;
         lux_object_data_tx.parse(data_msg);
         
-        lux_object_msg.scan_start_time = lux_object_data_tx.scan_start_timestamp;
-        lux_object_msg.num_of_objects = lux_object_data_tx.number_of_objects;
+        lux_object_msg.scan_start_timestamp = ntp_to_ros_time(lux_object_data_tx.scan_start_timestamp);
+        lux_object_msg.number_of_objects = lux_object_data_tx.number_of_objects;
 
-        ibeo_lux_msgs::LuxObject scan_object;
+        ibeo_msgs::Object2221 scan_object;
         Object2221 object_tx;
-        ibeo_lux_msgs::Point2D object_point;
-        Point2Df point_tx;
-        lux_object_msg.objects.clear();
+        ibeo_msgs::Point2Di object_point;
+        Point2Di point_tx;
+        lux_object_msg.object_list.clear();
 
-        for(int k = 0; k < lux_object_msg.num_of_objects; k++)
+        for(int k = 0; k < lux_object_msg.number_of_objects; k++)
         {
           object_tx = lux_object_data_tx.object_list[k];
-          scan_object.ID = object_tx.id;
+          scan_object.id = object_tx.id;
           scan_object.age = object_tx.age;
           scan_object.prediction_age = object_tx.prediction_age;
           scan_object.relative_timestamp = object_tx.relative_timestamp;
@@ -458,13 +467,13 @@ int main(int argc, char **argv)
           scan_object.bounding_box_length = 0.01 * object_tx.bounding_box_length;
           scan_object.object_box_center.x = 0.01 * object_tx.object_box_center.x;
           scan_object.object_box_center.y = 0.01 * object_tx.object_box_center.y;
-          scan_object.object_box_size.x = 0.01 * object_tx.object_box_size.size_x;
-          scan_object.object_box_size.y = 0.01 * object_tx.object_box_size.size_y;
-          scan_object.object_box_orientation = (float)object_tx.object_box_orientation; //TODO: Convert to radians.
+          scan_object.object_box_size.size_x = 0.01 * object_tx.object_box_size.size_x;
+          scan_object.object_box_size.size_y = 0.01 * object_tx.object_box_size.size_y;
+          scan_object.object_box_orientation = (float)object_tx.object_box_orientation;
           scan_object.absolute_velocity.x = object_tx.absolute_velocity.x;
           scan_object.absolute_velocity.y = object_tx.absolute_velocity.y;
-          scan_object.absolute_velocity_sigma.x = object_tx.absolute_velocity_sigma.size_x;
-          scan_object.absolute_velocity_sigma.y = object_tx.absolute_velocity_sigma.size_y;
+          scan_object.absolute_velocity_sigma.size_x = object_tx.absolute_velocity_sigma.size_x;
+          scan_object.absolute_velocity_sigma.size_y = object_tx.absolute_velocity_sigma.size_y;
           scan_object.relative_velocity.x = object_tx.relative_velocity.x;
           scan_object.relative_velocity.y = object_tx.relative_velocity.y;
           scan_object.classification = static_cast<uint8_t>(object_tx.classification);
@@ -472,17 +481,17 @@ int main(int argc, char **argv)
           scan_object.classification_certainty = object_tx.classification_certainty;
           scan_object.number_of_contour_points = object_tx.number_of_contour_points;
 
-          lux_object_msg.objects.push_back(scan_object);
+          lux_object_msg.object_list.push_back(scan_object);
           
           tf::Quaternion quaternion = tf::createQuaternionFromYaw(scan_object.object_box_orientation * 100/180 * M_PI);
 
           visualization_msgs::Marker object_marker = createWireframeMarker(scan_object.object_box_center.x,
                                                                            scan_object.object_box_center.y,
-                                                                           scan_object.object_box_size.x,
-                                                                           scan_object.object_box_size.y,
+                                                                           scan_object.object_box_size.size_x,
+                                                                           scan_object.object_box_size.size_y,
                                                                            0.75);
           object_marker.header.frame_id = frame_id;
-          object_marker.id  = scan_object.ID;
+          object_marker.id  = scan_object.id;
           object_marker.pose.orientation.x = quaternion.x();
           object_marker.pose.orientation.y = quaternion.y();
           object_marker.pose.orientation.z = quaternion.z();
@@ -553,7 +562,7 @@ int main(int argc, char **argv)
           
           visualization_msgs::Marker object_label;
           object_label.header.frame_id = frame_id;
-          object_label.id  = scan_object.ID + 1000;
+          object_label.id = scan_object.id + 1000;
           object_label.ns = label;
           object_label.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
           object_label.action = visualization_msgs::Marker::ADD;
@@ -579,7 +588,7 @@ int main(int argc, char **argv)
           object_point_marker.color.b = 0;
           object_point_marker.color.a = 0.7;
 
-          scan_object.list_of_contour_points.clear();
+          scan_object.contour_point_list.clear();
           geometry_msgs::Point dis_object_point;
 
           for(int j = 0; j < scan_object.number_of_contour_points; j++)
@@ -589,7 +598,7 @@ int main(int argc, char **argv)
             object_point.x = 0.01 * point_tx.x;
             object_point.y = 0.01 * point_tx.y;
 
-            scan_object.list_of_contour_points.push_back(object_point);
+            scan_object.contour_point_list.push_back(object_point);
             
             dis_object_point.x = object_point.x;
             dis_object_point.y = object_point.y;
@@ -612,54 +621,83 @@ int main(int argc, char **argv)
         object_data_pub.publish(lux_object_msg);
         object_markers_pub.publish(object_markers);
       }
-      else if(!is_fusion && lux_header_msg.data_type == HostVehicleState2805::DATA_TYPE)
+      else if(!is_fusion && lux_header_msg.data_type_id == HostVehicleState2805::DATA_TYPE)
       {
         ROS_DEBUG("Ibeo LUX - Reading vehicle state data 0x2805");
-        lux_vehicle_state_msg.lux_header  = lux_header_msg;
+        lux_vehicle_state_msg.ibeo_header  = lux_header_msg;
 
         //lux_vehicle_state_tx.header_ = header_tx;
         lux_vehicle_state_tx.parse(data_msg);
 
-        lux_vehicle_state_msg.timestamp = lux_vehicle_state_tx.timestamp;
+        lux_vehicle_state_msg.timestamp = ntp_to_ros_time(lux_vehicle_state_tx.timestamp);
         lux_vehicle_state_msg.scan_number = lux_vehicle_state_tx.scan_number;
         lux_vehicle_state_msg.error_flags = lux_vehicle_state_tx.error_flags;
         lux_vehicle_state_msg.longitudinal_velocity = lux_vehicle_state_tx.longitudinal_velocity;
         lux_vehicle_state_msg.steering_wheel_angle = lux_vehicle_state_tx.steering_wheel_angle;
         lux_vehicle_state_msg.front_wheel_angle = lux_vehicle_state_tx.front_wheel_angle;
-        lux_vehicle_state_msg.vehicle_x = lux_vehicle_state_tx.x_position;
-        lux_vehicle_state_msg.vehicle_y = lux_vehicle_state_tx.y_position;
+        lux_vehicle_state_msg.x_position = lux_vehicle_state_tx.x_position;
+        lux_vehicle_state_msg.y_position = lux_vehicle_state_tx.y_position;
         lux_vehicle_state_msg.course_angle = lux_vehicle_state_tx.course_angle;
         lux_vehicle_state_msg.time_difference = lux_vehicle_state_tx.time_difference;
-        lux_vehicle_state_msg.diff_in_x = lux_vehicle_state_tx.x_difference;
-        lux_vehicle_state_msg.diff_in_y = lux_vehicle_state_tx.y_difference;
-        lux_vehicle_state_msg.diff_in_heading = lux_vehicle_state_tx.heading_difference;
+        lux_vehicle_state_msg.x_difference = lux_vehicle_state_tx.x_difference;
+        lux_vehicle_state_msg.y_difference = lux_vehicle_state_tx.y_difference;
+        lux_vehicle_state_msg.heading_difference = lux_vehicle_state_tx.heading_difference;
         lux_vehicle_state_msg.current_yaw_rate = lux_vehicle_state_tx.current_yaw_rate;
 
         lux_vehicle_state_msg.header.frame_id = frame_id;
         lux_vehicle_state_msg.header.stamp = ros::Time::now();
         vehicle_state_pub.publish(lux_vehicle_state_msg);
       }
-      else if(!is_fusion && lux_header_msg.data_type == ErrorWarning::DATA_TYPE)
+      else if(!is_fusion && lux_header_msg.data_type_id == ErrorWarning::DATA_TYPE)
       {
         ROS_DEBUG("Ibeo LUX - Reading lux errors and warnings data 0x2030");
-        lux_error_warning_msg.lux_header  = lux_header_msg;
+        lux_error_warning_msg.ibeo_header  = lux_header_msg;
        
-        //lux_error_warning_tx.header = header_tx;
         lux_error_warning_tx.parse(data_msg);
        
-        /*
-        TODO: Change to new format.
-        lux_error_warning_msg.error_register1 = lux_error_warning_tx.error_register1_;
-        lux_error_warning_msg.error_register2 = lux_error_warning_tx.error_register2_;
-        lux_error_warning_msg.warning_register1 = lux_error_warning_tx.warning_register1_;
-        lux_error_warning_msg.warning_register2 = lux_error_warning_tx.warning_register2_;
-        */
+				lux_error_warning_msg.err_internal_error = lux_error_warning_msg.err_internal_error;
+				lux_error_warning_msg.err_motor_1_fault = lux_error_warning_msg.err_motor_1_fault;
+				lux_error_warning_msg.err_buffer_error_xmt_incomplete = lux_error_warning_msg.err_buffer_error_xmt_incomplete;
+				lux_error_warning_msg.err_buffer_error_overflow = lux_error_warning_msg.err_buffer_error_overflow;
+				lux_error_warning_msg.err_apd_over_temperature = lux_error_warning_msg.err_apd_over_temperature;
+				lux_error_warning_msg.err_apd_under_temperature = lux_error_warning_msg.err_apd_under_temperature;
+				lux_error_warning_msg.err_apd_temperature_sensor_defect = lux_error_warning_msg.err_apd_temperature_sensor_defect;
+				lux_error_warning_msg.err_motor_2_fault = lux_error_warning_msg.err_motor_2_fault;
+				lux_error_warning_msg.err_motor_3_fault = lux_error_warning_msg.err_motor_3_fault;
+				lux_error_warning_msg.err_motor_4_fault = lux_error_warning_msg.err_motor_4_fault;
+				lux_error_warning_msg.err_motor_5_fault = lux_error_warning_msg.err_motor_5_fault;
+				lux_error_warning_msg.err_int_no_scan_data = lux_error_warning_msg.err_int_no_scan_data;
+				lux_error_warning_msg.err_int_communication_error = lux_error_warning_msg.err_int_communication_error;
+				lux_error_warning_msg.err_int_incorrect_scan_data = lux_error_warning_msg.err_int_incorrect_scan_data;
+				lux_error_warning_msg.err_config_fpga_not_configurable = lux_error_warning_msg.err_config_fpga_not_configurable;
+				lux_error_warning_msg.err_config_incorrect_config_data = lux_error_warning_msg.err_config_incorrect_config_data;
+				lux_error_warning_msg.err_config_contains_incorrect_params = lux_error_warning_msg.err_config_contains_incorrect_params;
+				lux_error_warning_msg.err_timeout_data_processing = lux_error_warning_msg.err_timeout_data_processing;
+				lux_error_warning_msg.err_timeout_env_model_computation_reset = lux_error_warning_msg.err_timeout_env_model_computation_reset;
+				lux_error_warning_msg.wrn_int_communication_error = lux_error_warning_msg.wrn_int_communication_error;
+				lux_error_warning_msg.wrn_low_temperature = lux_error_warning_msg.wrn_low_temperature;
+				lux_error_warning_msg.wrn_high_temperature = lux_error_warning_msg.wrn_high_temperature;
+				lux_error_warning_msg.wrn_int_motor_1 = lux_error_warning_msg.wrn_int_motor_1;
+				lux_error_warning_msg.wrn_sync_error = lux_error_warning_msg.wrn_sync_error;
+				lux_error_warning_msg.wrn_laser_1_start_pulse_missing = lux_error_warning_msg.wrn_laser_1_start_pulse_missing;
+				lux_error_warning_msg.wrn_laser_2_start_pulse_missing = lux_error_warning_msg.wrn_laser_2_start_pulse_missing;
+				lux_error_warning_msg.wrn_can_interface_blocked = lux_error_warning_msg.wrn_can_interface_blocked;
+				lux_error_warning_msg.wrn_eth_interface_blocked = lux_error_warning_msg.wrn_eth_interface_blocked;
+				lux_error_warning_msg.wrn_incorrect_can_data_rcvd = lux_error_warning_msg.wrn_incorrect_can_data_rcvd;
+				lux_error_warning_msg.wrn_int_incorrect_scan_data = lux_error_warning_msg.wrn_int_incorrect_scan_data;
+				lux_error_warning_msg.wrn_eth_unkwn_incomplete_data = lux_error_warning_msg.wrn_eth_unkwn_incomplete_data;
+				lux_error_warning_msg.wrn_incorrect_or_forbidden_cmd_rcvd = lux_error_warning_msg.wrn_incorrect_or_forbidden_cmd_rcvd;
+				lux_error_warning_msg.wrn_memory_access_failure = lux_error_warning_msg.wrn_memory_access_failure;
+				lux_error_warning_msg.wrn_int_overflow = lux_error_warning_msg.wrn_int_overflow;
+				lux_error_warning_msg.wrn_ego_motion_data_missing = lux_error_warning_msg.wrn_ego_motion_data_missing;
+				lux_error_warning_msg.wrn_incorrect_mounting_params = lux_error_warning_msg.wrn_incorrect_mounting_params;
+				lux_error_warning_msg.wrn_no_obj_comp_due_to_scan_freq = lux_error_warning_msg.wrn_no_obj_comp_due_to_scan_freq;
 
         lux_error_warning_msg.header.frame_id = frame_id;
         lux_error_warning_msg.header.stamp = ros::Time::now();
         error_warn_pub.publish(lux_error_warning_msg);
       }
-      else if(is_fusion && lux_header_msg.data_type == ScanData2204::DATA_TYPE)
+      else if(is_fusion && lux_header_msg.data_type_id == ScanData2204::DATA_TYPE)
       {       
         ROS_DEBUG("Ibeo LUX - Reading FUSION SYSTEM/ECU scan data 0x2204");
 
@@ -667,48 +705,50 @@ int main(int argc, char **argv)
         pcl::PointCloud <pcl::PointXYZL> pcl_cloud_2204;
         pcl::PointXYZL cloud_point_2204;
 
-        //lux_fusion_scan_2204.lux_header = lux_header_msg;
+        lux_fusion_scan_2204.ibeo_header = lux_header_msg;
 
-        //fusion_scan_data_2204_tx.header_ = header_tx;
         fusion_scan_data_2204_tx.parse(data_msg);
 
         lux_fusion_scan_2204.scan_start_time = fusion_scan_data_2204_tx.scan_start_time; 
         lux_fusion_scan_2204.scan_end_time_offset = fusion_scan_data_2204_tx.scan_end_time_offset;
-        //TODO: Fix flags.
-        //lux_fusion_scan_2204.flags = fusion_scan_data_2204_tx.flags_;
+        lux_fusion_scan_2204.ground_labeled = fusion_scan_data_2204_tx.ground_labeled;
+        lux_fusion_scan_2204.dirt_labeled = fusion_scan_data_2204_tx.dirt_labeled;
+        lux_fusion_scan_2204.rain_labeled = fusion_scan_data_2204_tx.rain_labeled;
+        lux_fusion_scan_2204.mirror_side = static_cast<uint8_t>(fusion_scan_data_2204_tx.mirror_side);
+        lux_fusion_scan_2204.coordinate_system = static_cast<uint8_t>(fusion_scan_data_2204_tx.coordinate_system);
         lux_fusion_scan_2204.scan_number = fusion_scan_data_2204_tx.scan_number;
-        lux_fusion_scan_2204.num_scan_pts = fusion_scan_data_2204_tx.scan_points;
-        lux_fusion_scan_2204.num_scan_info = fusion_scan_data_2204_tx.number_of_scanner_infos;
+        lux_fusion_scan_2204.scan_points = fusion_scan_data_2204_tx.scan_points;
+        lux_fusion_scan_2204.number_of_scanner_infos = fusion_scan_data_2204_tx.number_of_scanner_infos;
 
-        ibeo_lux_msgs::FusionScanInfo2204 scan_info_2204;
+        ibeo_msgs::ScannerInfo2204 scan_info_2204;
         ScannerInfo2204 info_tx;
-        lux_fusion_scan_2204.scan_info_list.clear();
+        lux_fusion_scan_2204.scanner_info_list.clear();
 
-        for(int k = 0; k < lux_fusion_scan_2204.num_scan_info; k++)
+        for(int k = 0; k < lux_fusion_scan_2204.number_of_scanner_infos; k++)
         {
           info_tx = fusion_scan_data_2204_tx.scanner_info_list[k];
           scan_info_2204.device_id = info_tx.device_id;
-          scan_info_2204.type = info_tx.scanner_type;
-          scan_info_2204.number = info_tx.scan_number;
+          scan_info_2204.scanner_type = info_tx.scanner_type;
+          scan_info_2204.scan_number = info_tx.scan_number;
           scan_info_2204.start_angle = info_tx.start_angle;
           scan_info_2204.end_angle = info_tx.end_angle;
           scan_info_2204.yaw_angle = info_tx.yaw_angle;
           scan_info_2204.pitch_angle = info_tx.pitch_angle;
           scan_info_2204.roll_angle = info_tx.roll_angle;
-          scan_info_2204.mount_offset_x = info_tx.offset_x;
-          scan_info_2204.mount_offset_y = info_tx.offset_y;
-          scan_info_2204.mount_offset_z = info_tx.offset_z;
+          scan_info_2204.offset_x = info_tx.offset_x;
+          scan_info_2204.offset_y = info_tx.offset_y;
+          scan_info_2204.offset_z = info_tx.offset_z;
         
-          lux_fusion_scan_2204.scan_info_list.push_back(scan_info_2204);
+          lux_fusion_scan_2204.scanner_info_list.push_back(scan_info_2204);
         }
 
-        pcl_cloud_2204.reserve(lux_fusion_scan_2204.num_scan_pts);
+        pcl_cloud_2204.reserve(lux_fusion_scan_2204.scan_points);
 
-        ibeo_lux_msgs::FusionScanPoint  scan_point_2204;
+        ibeo_msgs::ScanPoint2204 scan_point_2204;
         ScanPoint2204 point_tx;
         lux_fusion_scan_2204.scan_point_list.clear();
 
-        for(int k = 0; k < lux_fusion_scan_2204.num_scan_pts; k++)
+        for(int k = 0; k < lux_fusion_scan_2204.scan_points; k++)
         {
           point_tx = fusion_scan_data_2204_tx.scan_point_list[k];
           scan_point_2204.x_position = point_tx.x_position;
@@ -718,9 +758,10 @@ int main(int argc, char **argv)
           scan_point_2204.device_id = point_tx.device_id;
           scan_point_2204.layer = point_tx.layer;
           scan_point_2204.echo = point_tx.echo;
-          scan_point_2204.time_stamp = point_tx.time_offset;
-          //TODO: Fix flags
-          //scan_point_2204.flags = point_tx.flags_;
+          scan_point_2204.time_offset = point_tx.time_offset;
+          scan_point_2204.ground = point_tx.ground;
+          scan_point_2204.dirt = point_tx.dirt;
+          scan_point_2204.precipitation = point_tx.precipitation;
 
           //cloud_point_2204.label = scan_point_2204.flags;
           cloud_point_2204.x = scan_point_2204.x_position;
@@ -739,87 +780,86 @@ int main(int argc, char **argv)
         pcl_conversions::toPCL(ros::Time::now(), pcl_cloud_2204.header.stamp);
         pointcloud_pub.publish(pcl_cloud_2204);
       }
-      // Fusion scan data 2205
-      else if(is_fusion && lux_header_msg.data_type == ScanData2205::DATA_TYPE)
+      else if(is_fusion && lux_header_msg.data_type_id == ScanData2205::DATA_TYPE)
       {
         ROS_DEBUG("Ibeo LUX - Reading FUSION SYSTEM/ECU scan data 0x2205");
 
         pcl::PointCloud <pcl::PointXYZL> pcl_cloud_2205;
         pcl::PointXYZL cloud_point_2205;
 
-        lux_fusion_scan_2205.lux_header = lux_header_msg;
+        lux_fusion_scan_2205.ibeo_header = lux_header_msg;
         
-        //fusion_scan_data_2205_tx.header_ = header_tx;
         fusion_scan_data_2205_tx.parse(data_msg);
 
-        lux_fusion_scan_2205.scan_start_time = fusion_scan_data_2205_tx.scan_start_time;
+        lux_fusion_scan_2205.scan_start_time = ntp_to_ros_time(fusion_scan_data_2205_tx.scan_start_time);
         lux_fusion_scan_2205.scan_end_time_offset = fusion_scan_data_2205_tx.scan_end_time_offset;
-        //TODO: Fix flags
-        //lux_fusion_scan_2205.flags = fusion_scan_data_2205_tx.flags_;
+        lux_fusion_scan_2205.fused_scan = fusion_scan_data_2205_tx.fused_scan;
+        lux_fusion_scan_2205.mirror_side = static_cast<uint8_t>(fusion_scan_data_2205_tx.mirror_side);
+        lux_fusion_scan_2205.coordinate_system = static_cast<uint8_t>(fusion_scan_data_2205_tx.coordinate_system);
         lux_fusion_scan_2205.scan_number = fusion_scan_data_2205_tx.scan_number;
-        lux_fusion_scan_2205.num_scan_pts = fusion_scan_data_2205_tx.scan_points;
-        lux_fusion_scan_2205.num_scan_info = fusion_scan_data_2205_tx.number_of_scanner_infos;
+        lux_fusion_scan_2205.scan_points = fusion_scan_data_2205_tx.scan_points;
+        lux_fusion_scan_2205.number_of_scanner_infos = fusion_scan_data_2205_tx.number_of_scanner_infos;
 
-        ibeo_lux_msgs::FusionScanInfo2205 scan_info_2205;
+        ibeo_msgs::ScannerInfo2205 scan_info_2205;
         ScannerInfo2205 info_tx;
-        lux_fusion_scan_2205.scan_info_list.clear();
+        lux_fusion_scan_2205.scanner_info_list.clear();
 
-        for(int k = 0; k < lux_fusion_scan_2205.num_scan_info; k++)
+        for(int k = 0; k < lux_fusion_scan_2205.number_of_scanner_infos; k++)
         {
           info_tx = fusion_scan_data_2205_tx.scanner_info_list[k];
           scan_info_2205.device_id = info_tx.device_id;
-          scan_info_2205.type = info_tx.scanner_type;
-          scan_info_2205.number = info_tx.scan_number;
+          scan_info_2205.scanner_type = info_tx.scanner_type;
+          scan_info_2205.scan_number = info_tx.scan_number;
           scan_info_2205.start_angle = info_tx.start_angle;
           scan_info_2205.end_angle = info_tx.end_angle;
-          scan_info_2205.scan_start_time = info_tx.scan_start_time;
-          scan_info_2205.scan_end_time = info_tx.scan_end_time;
-          scan_info_2205.device_start_time = info_tx.scan_start_time_from_device;
-          scan_info_2205.device_end_time = info_tx.scan_end_time_from_device;
+          scan_info_2205.scan_start_time = ntp_to_ros_time(info_tx.scan_start_time);
+          scan_info_2205.scan_end_time = ntp_to_ros_time(info_tx.scan_end_time);
+          scan_info_2205.scan_start_time_from_device = ntp_to_ros_time(info_tx.scan_start_time_from_device);
+          scan_info_2205.scan_end_time_from_device = ntp_to_ros_time(info_tx.scan_end_time_from_device);
           scan_info_2205.scan_frequency = info_tx.scan_frequency;
           scan_info_2205.beam_tilt = info_tx.beam_tilt;
           scan_info_2205.scan_flags = info_tx.scan_flags;
-          scan_info_2205.mount_position.yaw_angle = info_tx.mounting_position.yaw_angle;
-          scan_info_2205.mount_position.pitch_angle = info_tx.mounting_position.pitch_angle;
-          scan_info_2205.mount_position.roll_angle = info_tx.mounting_position.roll_angle;
-          scan_info_2205.mount_position.offset_x = info_tx.mounting_position.x_position;
-          scan_info_2205.mount_position.offset_y = info_tx.mounting_position.y_position;
-          scan_info_2205.mount_position.offset_z = info_tx.mounting_position.z_position;
+          scan_info_2205.mounting_position.yaw_angle = info_tx.mounting_position.yaw_angle;
+          scan_info_2205.mounting_position.pitch_angle = info_tx.mounting_position.pitch_angle;
+          scan_info_2205.mounting_position.roll_angle = info_tx.mounting_position.roll_angle;
+          scan_info_2205.mounting_position.x_position = info_tx.mounting_position.x_position;
+          scan_info_2205.mounting_position.y_position = info_tx.mounting_position.y_position;
+          scan_info_2205.mounting_position.z_position = info_tx.mounting_position.z_position;
 
-          scan_info_2205.resolution1.resolution_start_angle = info_tx.resolutions[0].resolution_start_angle;
-          scan_info_2205.resolution1.resolution = info_tx.resolutions[0].resolution;
+          scan_info_2205.resolutions[0].resolution_start_angle = info_tx.resolutions[0].resolution_start_angle;
+          scan_info_2205.resolutions[0].resolution = info_tx.resolutions[0].resolution;
 
-          scan_info_2205.resolution2.resolution_start_angle = info_tx.resolutions[1].resolution_start_angle;
-          scan_info_2205.resolution2.resolution = info_tx.resolutions[1].resolution;
+          scan_info_2205.resolutions[1].resolution_start_angle = info_tx.resolutions[1].resolution_start_angle;
+          scan_info_2205.resolutions[1].resolution = info_tx.resolutions[1].resolution;
 
-          scan_info_2205.resolution3.resolution_start_angle = info_tx.resolutions[2].resolution_start_angle;
-          scan_info_2205.resolution3.resolution = info_tx.resolutions[2].resolution;
+          scan_info_2205.resolutions[2].resolution_start_angle = info_tx.resolutions[2].resolution_start_angle;
+          scan_info_2205.resolutions[2].resolution = info_tx.resolutions[2].resolution;
 
-          scan_info_2205.resolution4.resolution_start_angle = info_tx.resolutions[3].resolution_start_angle;
-          scan_info_2205.resolution4.resolution = info_tx.resolutions[3].resolution;
+          scan_info_2205.resolutions[3].resolution_start_angle = info_tx.resolutions[3].resolution_start_angle;
+          scan_info_2205.resolutions[3].resolution = info_tx.resolutions[3].resolution;
 
-          scan_info_2205.resolution5.resolution_start_angle = info_tx.resolutions[4].resolution_start_angle;
-          scan_info_2205.resolution5.resolution = info_tx.resolutions[4].resolution;
+          scan_info_2205.resolutions[4].resolution_start_angle = info_tx.resolutions[4].resolution_start_angle;
+          scan_info_2205.resolutions[4].resolution = info_tx.resolutions[4].resolution;
 
-          scan_info_2205.resolution6.resolution_start_angle = info_tx.resolutions[5].resolution_start_angle;
-          scan_info_2205.resolution6.resolution = info_tx.resolutions[5].resolution;
+          scan_info_2205.resolutions[5].resolution_start_angle = info_tx.resolutions[5].resolution_start_angle;
+          scan_info_2205.resolutions[5].resolution = info_tx.resolutions[5].resolution;
 
-          scan_info_2205.resolution7.resolution_start_angle = info_tx.resolutions[6].resolution_start_angle;
-          scan_info_2205.resolution7.resolution = info_tx.resolutions[6].resolution;
+          scan_info_2205.resolutions[6].resolution_start_angle = info_tx.resolutions[6].resolution_start_angle;
+          scan_info_2205.resolutions[6].resolution = info_tx.resolutions[6].resolution;
 
-          scan_info_2205.resolution8.resolution_start_angle = info_tx.resolutions[7].resolution_start_angle;
-          scan_info_2205.resolution8.resolution = info_tx.resolutions[7].resolution;
+          scan_info_2205.resolutions[7].resolution_start_angle = info_tx.resolutions[7].resolution_start_angle;
+          scan_info_2205.resolutions[7].resolution = info_tx.resolutions[7].resolution;
 
-          lux_fusion_scan_2205.scan_info_list.push_back(scan_info_2205);
+          lux_fusion_scan_2205.scanner_info_list.push_back(scan_info_2205);
         }
 
-        pcl_cloud_2205.reserve(lux_fusion_scan_2205.num_scan_pts);
+        pcl_cloud_2205.reserve(lux_fusion_scan_2205.scan_points);
 
-        ibeo_lux_msgs::FusionScanPoint  scan_point_2205;
+        ibeo_msgs::ScanPoint2205  scan_point_2205;
         ScanPoint2205  point_tx;
         lux_fusion_scan_2205.scan_point_list.clear();
         
-        for(int k = 0; k < lux_fusion_scan_2205.num_scan_pts; k++)
+        for(int k = 0; k < lux_fusion_scan_2205.scan_points; k++)
         {
           point_tx = fusion_scan_data_2205_tx.scan_point_list[k];
           scan_point_2205.x_position = (float) point_tx.x_position;
@@ -829,9 +869,11 @@ int main(int argc, char **argv)
           scan_point_2205.device_id = point_tx.device_id;
           scan_point_2205.layer = point_tx.layer;
           scan_point_2205.echo = point_tx.echo;
-          scan_point_2205.time_stamp = point_tx.time_offset;
-          //TODO: Fix flags
-          //scan_point_2205.flags = point_tx.flags_;
+          scan_point_2205.time_offset = point_tx.time_offset;
+          scan_point_2205.ground = point_tx.ground;
+          scan_point_2205.dirt = point_tx.dirt;
+          scan_point_2205.precipitation = point_tx.precipitation;
+          scan_point_2205.transparent = point_tx.transparent;
 
           lux_fusion_scan_2205.scan_point_list.push_back(scan_point_2205);
           
@@ -850,30 +892,29 @@ int main(int argc, char **argv)
         pcl_conversions::toPCL(ros::Time::now(), pcl_cloud_2205.header.stamp);
         pointcloud_pub.publish(pcl_cloud_2205);
       }
-      else if(is_fusion && lux_header_msg.data_type == ObjectData2225::DATA_TYPE)
+      else if(is_fusion && lux_header_msg.data_type_id == ObjectData2225::DATA_TYPE)
       {
         ROS_DEBUG("Ibeo LUX - Reading Fusion object data 0x2225");
-        visualization_msgs::MarkerArray   object_markers_2225;
+        visualization_msgs::MarkerArray object_markers_2225;
 
-        lux_fusion_object_2225.lux_header = lux_header_msg;
+        lux_fusion_object_2225.ibeo_header = lux_header_msg;
 
-        //fusion_object_data_2225_tx.header_ = header_tx;
         fusion_object_data_2225_tx.parse(data_msg);
 
-        lux_fusion_object_2225.mid_scan_timestamp = fusion_object_data_2225_tx.mid_scan_timestamp;
-        lux_fusion_object_2225.num_of_objects = fusion_object_data_2225_tx.number_of_objects;
+        lux_fusion_object_2225.mid_scan_timestamp = ntp_to_ros_time(fusion_object_data_2225_tx.mid_scan_timestamp);
+        lux_fusion_object_2225.number_of_objects = fusion_object_data_2225_tx.number_of_objects;
 
-        ibeo_lux_msgs::FusionObject2225 scan_object;
+        ibeo_msgs::Object2225 scan_object;
         Object2225 object_tx;
-        lux_fusion_object_2225.objects.clear();
+        lux_fusion_object_2225.object_list.clear();
 
-        for(int k = 0; k < lux_fusion_object_2225.num_of_objects; k++)
+        for(int k = 0; k < lux_fusion_object_2225.number_of_objects; k++)
         {
           object_tx = fusion_object_data_2225_tx.object_list[k];
-          scan_object.ID = object_tx.id;
-          scan_object.object_age = object_tx.age;
-          scan_object.time_stamp = object_tx.timestamp;
-          scan_object.object_hidden_age = object_tx.hidden_status_age;
+          scan_object.id = object_tx.id;
+          scan_object.age = object_tx.age;
+          scan_object.timestamp = ntp_to_ros_time(object_tx.timestamp);
+          scan_object.hidden_status_age = object_tx.hidden_status_age;
           scan_object.classification = static_cast<uint8_t>(object_tx.classification);
           scan_object.classification_certainty = object_tx.classification_certainty;
           scan_object.classification_age = object_tx.classification_age;
@@ -899,7 +940,7 @@ int main(int argc, char **argv)
           scan_object.number_of_contour_points = object_tx.number_of_contour_points;
           scan_object.closest_point_index = object_tx.closest_point_index;
 
-          lux_fusion_object_2225.objects.push_back(scan_object);
+          lux_fusion_object_2225.object_list.push_back(scan_object);
           tf::Quaternion quaternion = tf::createQuaternionFromYaw(scan_object.yaw_angle); 
           visualization_msgs::Marker object_marker_2225 = createWireframeMarker(scan_object.object_box_center.x,
                                                                                 scan_object.object_box_center.y,
@@ -907,7 +948,7 @@ int main(int argc, char **argv)
                                                                                 scan_object.object_box_size.y,
                                                                                 0.75);
           object_marker_2225.header.frame_id = frame_id;
-          object_marker_2225.id  = scan_object.ID;
+          object_marker_2225.id  = scan_object.id;
           object_marker_2225.lifetime = ros::Duration(0.2);
           object_marker_2225.pose.orientation.x = quaternion.x();
           object_marker_2225.pose.orientation.y = quaternion.y();
@@ -978,7 +1019,7 @@ int main(int argc, char **argv)
           visualization_msgs::Marker   object_label;
           object_label.header.frame_id = frame_id;
           object_label.ns = label;
-          object_label.id = scan_object.ID + 1000;
+          object_label.id = scan_object.id + 1000;
           object_label.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
           object_label.action = visualization_msgs::Marker::ADD;
           object_label.pose.position.x = scan_object.object_box_center.x;
@@ -990,9 +1031,9 @@ int main(int argc, char **argv)
           object_label.color.r = object_label.color.g = object_label.color.b = 1;
           object_label.color.a = 0.5;
           
-          ibeo_lux_msgs::Float2D object_point;
+          ibeo_msgs::Point2Df object_point;
           Point2Df point_tx;
-          scan_object.list_of_contour_points.clear();
+          scan_object.contour_point_list.clear();
           
           visualization_msgs::Marker object_point_marker;
           object_point_marker.header.frame_id = frame_id;
@@ -1014,7 +1055,7 @@ int main(int argc, char **argv)
             object_point.x = point_tx.x;
             object_point.y = point_tx.y;
 
-            scan_object.list_of_contour_points.push_back(object_point);
+            scan_object.contour_point_list.push_back(object_point);
             geometry_msgs::Point dis_object_point;
             dis_object_point.x = object_point.x;
             dis_object_point.y = object_point.y;
@@ -1037,41 +1078,41 @@ int main(int argc, char **argv)
 
         object_markers_pub.publish(object_markers_2225);
       }
-      else if(is_fusion && lux_header_msg.data_type == ObjectData2280::DATA_TYPE)
+      else if(is_fusion && lux_header_msg.data_type_id == ObjectData2280::DATA_TYPE)
       {
         ROS_DEBUG("Ibeo LUX - Reading Fusion object data 0x2280");
         visualization_msgs::MarkerArray object_markers_2280;
 
-        lux_fusion_object_2280.lux_header = lux_header_msg;
+        lux_fusion_object_2280.ibeo_header = lux_header_msg;
 
-        //fusion_object_data_2280_tx.header_ = header_tx;
         fusion_object_data_2280_tx.parse(data_msg);
 
-        lux_fusion_object_2280.mid_scan_timestamp = fusion_object_data_2280_tx.mid_scan_timestamp;
-        lux_fusion_object_2280.num_of_objects = fusion_object_data_2280_tx.number_of_objects;
+        lux_fusion_object_2280.mid_scan_timestamp = ntp_to_ros_time(fusion_object_data_2280_tx.mid_scan_timestamp);
+        lux_fusion_object_2280.number_of_objects = fusion_object_data_2280_tx.number_of_objects;
 
-        ibeo_lux_msgs::FusionObject2280 scan_object;
+        ibeo_msgs::Object2280 scan_object;
         Object2280 object_tx;
         lux_fusion_object_2280.objects.clear();
 
-        for(int k = 0; k < lux_fusion_object_2280.num_of_objects; k++)
+        for(int k = 0; k < lux_fusion_object_2280.number_of_objects; k++)
         {
           object_tx = fusion_object_data_2280_tx.object_list[k];
-          scan_object.ID = object_tx.id;
-          //TODO: Fix flags
-          //scan_object.flags = object_tx.flags_;
+          scan_object.id = object_tx.id;
+          scan_object.tracking_model = static_cast<uint8_t>(object_tx.tracking_model);
+          scan_object.mobility_of_dyn_object_detected = object_tx.mobility_of_dyn_object_detected;
+          scan_object.motion_model_validated = object_tx.motion_model_validated;
           scan_object.object_age = object_tx.object_age;
-          scan_object.time_stamp = object_tx.timestamp;
+          scan_object.timestamp = ntp_to_ros_time(object_tx.timestamp);
           scan_object.object_prediction_age = object_tx.object_prediction_age;
           scan_object.classification = static_cast<uint8_t>(object_tx.classification);
-          scan_object.classification_quality = object_tx.classification_certainty;
+          scan_object.classification_certainty = object_tx.classification_certainty;
           scan_object.classification_age = object_tx.classification_age;
           scan_object.object_box_center.x = object_tx.object_box_center.x;
           scan_object.object_box_center.y = object_tx.object_box_center.y;
           scan_object.object_box_size.x = object_tx.object_box_size.x;
           scan_object.object_box_size.y = object_tx.object_box_size.y;
-          scan_object.object_course_angle = object_tx.object_box_orientation_angle;
-          scan_object.object_course_angle_sigma = object_tx.object_box_orientation_angle_sigma;
+          scan_object.object_box_orientation_angle = object_tx.object_box_orientation_angle;
+          scan_object.object_box_orientation_angle_sigma = object_tx.object_box_orientation_angle_sigma;
           scan_object.relative_velocity.x = object_tx.relative_velocity.x;
           scan_object.relative_velocity.y = object_tx.relative_velocity.y;
           scan_object.relative_velocity_sigma.x = object_tx.relative_velocity_sigma.x;
@@ -1088,17 +1129,17 @@ int main(int argc, char **argv)
           scan_object.reference_point_coordinate_sigma.x = object_tx.reference_point_coordinate_sigma.x;
           scan_object.reference_point_coordinate_sigma.y = object_tx.reference_point_coordinate_sigma.y;
           scan_object.object_priority = object_tx.object_priority;
-          //TODO: Add object_existence_measurement
+          scan_object.object_existence_measurement = object_tx.object_existence_measurement;
 
           lux_fusion_object_2280.objects.push_back(scan_object);
-          tf::Quaternion quaternion = tf::createQuaternionFromYaw(scan_object.object_course_angle); 
+          tf::Quaternion quaternion = tf::createQuaternionFromYaw(scan_object.object_box_orientation_angle); 
           visualization_msgs::Marker   object_marker_2280 = createWireframeMarker(scan_object.object_box_center.x,
                                                                                   scan_object.object_box_center.y,
                                                                                   scan_object.object_box_size.x,
                                                                                   scan_object.object_box_size.y,
                                                                                   0.75);;
           object_marker_2280.header.frame_id = frame_id;
-          object_marker_2280.id = scan_object.ID;
+          object_marker_2280.id = scan_object.id;
           object_marker_2280.lifetime = ros::Duration(0.2);
           object_marker_2280.pose.orientation.x = quaternion.x();
           object_marker_2280.pose.orientation.y = quaternion.y();
@@ -1169,7 +1210,7 @@ int main(int argc, char **argv)
           visualization_msgs::Marker object_label;
           object_label.header.frame_id = frame_id;
           object_label.ns = label;
-          object_label.id = scan_object.ID + 1000;
+          object_label.id = scan_object.id + 1000;
           object_label.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
           object_label.action = visualization_msgs::Marker::ADD;
           object_label.pose.position.x = scan_object.object_box_center.x;
@@ -1181,9 +1222,9 @@ int main(int argc, char **argv)
           object_label.color.r = object_label.color.g = object_label.color.b = 1;
           object_label.color.a = 0.5;
           
-          ibeo_lux_msgs::Float2D object_point;
+          ibeo_msgs::Point2Df object_point;
           Point2Df point_tx;
-          scan_object.list_of_contour_points.clear();
+          scan_object.contour_point_list.clear();
           visualization_msgs::Marker object_point_marker;
           object_point_marker.header.frame_id = frame_id;
           object_point_marker.type = visualization_msgs::Marker::POINTS;
@@ -1197,7 +1238,7 @@ int main(int argc, char **argv)
           object_point_marker.color.g = 1;
           object_point_marker.color.b = 0;
           object_point_marker.color.a = 0.7;
-          scan_object.list_of_contour_points.clear();
+          scan_object.contour_point_list.clear();
           geometry_msgs::Point dis_object_point;
 
           for(unsigned int j = 0; j < scan_object.number_of_contour_points; j++)
@@ -1206,7 +1247,7 @@ int main(int argc, char **argv)
             object_point.x = point_tx.x;
             object_point.y = point_tx.y;
 
-            scan_object.list_of_contour_points.push_back(object_point);
+            scan_object.contour_point_list.push_back(object_point);
             
             geometry_msgs::Point dis_object_point;
             dis_object_point.x = object_point.x;
@@ -1228,44 +1269,43 @@ int main(int argc, char **argv)
 
         object_markers_pub.publish(object_markers_2280);
       }
-      else if(is_fusion && lux_header_msg.data_type == CameraImage::DATA_TYPE)
+      else if(is_fusion && lux_header_msg.data_type_id == CameraImage::DATA_TYPE)
       {
         ROS_DEBUG("Ibeo LUX - Reading FUSION SYSTEM/ECU image 2403");
-        lux_fusion_image_msg.lux_header = lux_header_msg;
+        lux_fusion_image_msg.ibeo_header = lux_header_msg;
 
         //fusion_image_tx.header_ = header_tx;
         fusion_image_tx.parse(data_msg);
 
         lux_fusion_image_msg.image_format = fusion_image_tx.image_format;
-        lux_fusion_image_msg.time_stamp = fusion_image_tx.us_since_power_on;
-        lux_fusion_image_msg.time_stamp_ntp = fusion_image_tx.timestamp;
-        lux_fusion_image_msg.ID = fusion_image_tx.device_id;
+        lux_fusion_image_msg.us_since_power_on = fusion_image_tx.us_since_power_on;
+        lux_fusion_image_msg.timestamp = ntp_to_ros_time(fusion_image_tx.timestamp);
+        lux_fusion_image_msg.device_id = fusion_image_tx.device_id;
         lux_fusion_image_msg.mounting_position.yaw_angle = fusion_image_tx.mounting_position.yaw_angle;
         lux_fusion_image_msg.mounting_position.pitch_angle = fusion_image_tx.mounting_position.pitch_angle;
         lux_fusion_image_msg.mounting_position.roll_angle = fusion_image_tx.mounting_position.roll_angle;
-        lux_fusion_image_msg.mounting_position.offset_x = fusion_image_tx.mounting_position.x_position;
-        lux_fusion_image_msg.mounting_position.offset_y = fusion_image_tx.mounting_position.y_position;
-        lux_fusion_image_msg.mounting_position.offset_z = fusion_image_tx.mounting_position.z_position;
+        lux_fusion_image_msg.mounting_position.x_position = fusion_image_tx.mounting_position.x_position;
+        lux_fusion_image_msg.mounting_position.y_position = fusion_image_tx.mounting_position.y_position;
+        lux_fusion_image_msg.mounting_position.z_position = fusion_image_tx.mounting_position.z_position;
         lux_fusion_image_msg.horizontal_opening_angle = fusion_image_tx.horizontal_opening_angle;
         lux_fusion_image_msg.vertical_opening_angle = fusion_image_tx.vertical_opening_angle;
         lux_fusion_image_msg.image_width = fusion_image_tx.image_width;
         lux_fusion_image_msg.image_height = fusion_image_tx.image_height;
-        lux_fusion_image_msg.compress_size = fusion_image_tx.compressed_size;
-        lux_fusion_image_msg.image_bytes = fusion_image_tx.image_buffer; 
+        lux_fusion_image_msg.compressed_size = fusion_image_tx.compressed_size;
+        lux_fusion_image_msg.image_buffer = fusion_image_tx.image_buffer; 
         
         lux_fusion_image_msg.header.frame_id = frame_id;
         lux_fusion_image_msg.header.stamp = ros::Time::now();
         fusion_img_2403_pub.publish(lux_fusion_image_msg);
       }
-      else if(is_fusion && lux_header_msg.data_type == HostVehicleState2806::DATA_TYPE)
+      else if(is_fusion && lux_header_msg.data_type_id == HostVehicleState2806::DATA_TYPE)
       {
         ROS_DEBUG("Ibeo LUX - Reading Fusion vehicle state data 0x2806");
-        lux_vehicle_state_2806_msg.lux_header  = lux_header_msg;
+        lux_vehicle_state_2806_msg.ibeo_header = lux_header_msg;
 
-        //fusion_vehicle_state_2806_tx.header_ = header_tx;
         fusion_vehicle_state_2806_tx.parse(data_msg);
 
-        lux_vehicle_state_2806_msg.time_stamp = fusion_vehicle_state_2806_tx.timestamp;
+        lux_vehicle_state_2806_msg.timestamp = ntp_to_ros_time(fusion_vehicle_state_2806_tx.timestamp);
         lux_vehicle_state_2806_msg.distance_x = fusion_vehicle_state_2806_tx.distance_x;
         lux_vehicle_state_2806_msg.distance_y = fusion_vehicle_state_2806_tx.distance_y;
         lux_vehicle_state_2806_msg.course_angle = fusion_vehicle_state_2806_tx.course_angle;
@@ -1277,40 +1317,39 @@ int main(int argc, char **argv)
         lux_vehicle_state_2806_msg.vehicle_front_to_front_axle = fusion_vehicle_state_2806_tx.vehicle_front_to_front_axle;
         lux_vehicle_state_2806_msg.rear_axle_to_front_axle = fusion_vehicle_state_2806_tx.rear_axle_to_front_axle;
         lux_vehicle_state_2806_msg.rear_axle_to_vehicle_rear = fusion_vehicle_state_2806_tx.rear_axle_to_vehicle_rear;
-        lux_vehicle_state_2806_msg.steer_ratio_poly0 = fusion_vehicle_state_2806_tx.steer_ratio_poly_0;
-        lux_vehicle_state_2806_msg.steer_ratio_poly1 = fusion_vehicle_state_2806_tx.steer_ratio_poly_1;
-        lux_vehicle_state_2806_msg.steer_ratio_poly2 = fusion_vehicle_state_2806_tx.steer_ratio_poly_2;
-        lux_vehicle_state_2806_msg.steer_ratio_poly3 = fusion_vehicle_state_2806_tx.steer_ratio_poly_3;
+        lux_vehicle_state_2806_msg.steer_ratio_poly_0 = fusion_vehicle_state_2806_tx.steer_ratio_poly_0;
+        lux_vehicle_state_2806_msg.steer_ratio_poly_1 = fusion_vehicle_state_2806_tx.steer_ratio_poly_1;
+        lux_vehicle_state_2806_msg.steer_ratio_poly_2 = fusion_vehicle_state_2806_tx.steer_ratio_poly_2;
+        lux_vehicle_state_2806_msg.steer_ratio_poly_3 = fusion_vehicle_state_2806_tx.steer_ratio_poly_3;
 
         lux_vehicle_state_msg.header.frame_id = frame_id;
         lux_vehicle_state_msg.header.stamp = ros::Time::now();
         fusion_vehicle_2806_pub.publish(lux_vehicle_state_msg);
       }
-      else if(is_fusion && lux_header_msg.data_type == HostVehicleState2807::DATA_TYPE)
+      else if(is_fusion && lux_header_msg.data_type_id == HostVehicleState2807::DATA_TYPE)
       {
         ROS_DEBUG("Ibeo LUX - Reading Fusion vehicle state data 0x2807");
-        lux_vehicle_state_2807_msg.lux_header  = lux_header_msg;
+        lux_vehicle_state_2807_msg.ibeo_header  = lux_header_msg;
 
-        //fusion_vehicle_state_2807_tx.header_ = header_tx;
         fusion_vehicle_state_2807_tx.parse(data_msg);
 
-        lux_vehicle_state_2807_msg.time_stamp = fusion_vehicle_state_2807_tx.timestamp;
+        lux_vehicle_state_2807_msg.timestamp = ntp_to_ros_time(fusion_vehicle_state_2807_tx.timestamp);
         lux_vehicle_state_2807_msg.distance_x = fusion_vehicle_state_2807_tx.distance_x;
         lux_vehicle_state_2807_msg.distance_y = fusion_vehicle_state_2807_tx.distance_y;
         lux_vehicle_state_2807_msg.course_angle = fusion_vehicle_state_2807_tx.course_angle;
         lux_vehicle_state_2807_msg.longitudinal_velocity = fusion_vehicle_state_2807_tx.longitudinal_velocity;
         lux_vehicle_state_2807_msg.yaw_rate = fusion_vehicle_state_2807_tx.yaw_rate;
         lux_vehicle_state_2807_msg.steering_wheel_angle = fusion_vehicle_state_2807_tx.steering_wheel_angle;
-        //TODO: Add cross_acceleration
+        lux_vehicle_state_2807_msg.cross_acceleration = fusion_vehicle_state_2807_tx.cross_acceleration;
         lux_vehicle_state_2807_msg.front_wheel_angle = fusion_vehicle_state_2807_tx.front_wheel_angle;
         lux_vehicle_state_2807_msg.vehicle_width = fusion_vehicle_state_2807_tx.vehicle_width;
         lux_vehicle_state_2807_msg.vehicle_front_to_front_axle = fusion_vehicle_state_2807_tx.vehicle_front_to_front_axle;
         lux_vehicle_state_2807_msg.rear_axle_to_front_axle = fusion_vehicle_state_2807_tx.rear_axle_to_front_axle;
         lux_vehicle_state_2807_msg.rear_axle_to_vehicle_rear = fusion_vehicle_state_2807_tx.rear_axle_to_vehicle_rear;
-        lux_vehicle_state_2807_msg.steer_ratio_poly0 = fusion_vehicle_state_2807_tx.steer_ratio_poly_0;
-        lux_vehicle_state_2807_msg.steer_ratio_poly1 = fusion_vehicle_state_2807_tx.steer_ratio_poly_1;
-        lux_vehicle_state_2807_msg.steer_ratio_poly2 = fusion_vehicle_state_2807_tx.steer_ratio_poly_2;
-        lux_vehicle_state_2807_msg.steer_ratio_poly3 = fusion_vehicle_state_2807_tx.steer_ratio_poly_3;
+        lux_vehicle_state_2807_msg.steer_ratio_poly_0 = fusion_vehicle_state_2807_tx.steer_ratio_poly_0;
+        lux_vehicle_state_2807_msg.steer_ratio_poly_1 = fusion_vehicle_state_2807_tx.steer_ratio_poly_1;
+        lux_vehicle_state_2807_msg.steer_ratio_poly_2 = fusion_vehicle_state_2807_tx.steer_ratio_poly_2;
+        lux_vehicle_state_2807_msg.steer_ratio_poly_3 = fusion_vehicle_state_2807_tx.steer_ratio_poly_3;
         lux_vehicle_state_2807_msg.longitudinal_acceleration = fusion_vehicle_state_2807_tx.longitudinal_acceleration;
 
         lux_vehicle_state_2807_msg.header.frame_id = frame_id;
