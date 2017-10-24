@@ -26,6 +26,7 @@ catkin_package(CATKIN_DEPENDS
 
 ## Build executables
 include_directories(
+  include/${PROJECT_NAME}
   core_ibeo/include
   ${catkin_INCLUDE_DIRS}
 )
@@ -33,6 +34,7 @@ include_directories(
 add_executable(${PROJECT_NAME}
   core_ibeo/src/ibeo_core.cpp
   src/ros_ibeo_lux.cpp
+  src/ibeo_lux_ros_msg_handler.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
