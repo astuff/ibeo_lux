@@ -180,7 +180,7 @@ void IbeoLuxRosMsgHandler::fillMarkerArray(std::vector<IbeoObject>& objects, vis
     }
 
     object_marker.ns = label;
-    object_marker.type = visualization_msgs::Marker::CUBE;
+    object_marker.type = visualization_msgs::Marker::LINE_LIST;
     object_marker.action = visualization_msgs::Marker::ADD;
     object_marker.header.stamp = ros::Time::now();
     object_marker.header.frame_id = frame_id;
@@ -188,7 +188,7 @@ void IbeoLuxRosMsgHandler::fillMarkerArray(std::vector<IbeoObject>& objects, vis
     object_marker.scale.y = 0.1;
     object_marker.scale.z = 0.1;
 
-    visualization_msgs::Marker   object_label;
+    visualization_msgs::Marker object_label;
     object_label.id  = o.id + 1000;
     object_label.ns = label;
     object_label.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
@@ -924,17 +924,12 @@ visualization_msgs::Marker IbeoLuxRosMsgHandler::createWireframeMarker(const flo
                                                                        const float& size_z)
 {
   visualization_msgs::Marker box;
-  box.type = visualization_msgs::Marker::LINE_LIST;
-  box.action = visualization_msgs::Marker::ADD;
   box.pose.position.x = center_x;
   box.pose.position.y = center_y;
-  box.scale.x = 1.0;
-  box.scale.y = 1.0;
-  box.scale.z = 1.0;
   geometry_msgs::Point p1, p2, p3, p4, p5, p6, p7, p8;
 
-  size_y = (size_y <= 0.1f)? 0.1f : size_y;
-  size_x = (size_x <= 0.1f)? 0.1f : size_x;
+  size_y = (size_y <= 0.1f) ? 0.1f : size_y;
+  size_x = (size_x <= 0.1f) ? 0.1f : size_x;
 
   float half_x = (0.5) * size_x;
   float half_y = (0.5) * size_y;
