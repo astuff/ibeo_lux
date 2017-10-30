@@ -117,7 +117,7 @@ void IbeoLuxRosMsgHandler::fillMarkerArray(std::vector<IbeoObject>& objects, vis
 {
   for( IbeoObject o : objects )
   {
-    tf::Quaternion quaternion = tf::createQuaternionFromYaw(o.object_box_orientation * 100/180 * M_PI);
+    tf::Quaternion quaternion = tf::createQuaternionFromYaw(o.object_box_orientation); // Should already be in radians.
     visualization_msgs::Marker object_marker = createWireframeMarker(o.object_box_center.x,
                                                                      o.object_box_center.y,
                                                                      o.object_box_size.size_x,
