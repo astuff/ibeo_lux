@@ -928,7 +928,9 @@ visualization_msgs::Marker IbeoLuxRosMsgHandler::createWireframeMarker(const flo
   box.action = visualization_msgs::Marker::ADD;
   box.pose.position.x = center_x;
   box.pose.position.y = center_y;
-  box.scale.x = 0.05;
+  box.scale.x = 1.0;
+  box.scale.y = 1.0;
+  box.scale.z = 1.0;
   geometry_msgs::Point p1, p2, p3, p4, p5, p6, p7, p8;
 
   size_y = (size_y <= 0.1f)? 0.1f : size_y;
