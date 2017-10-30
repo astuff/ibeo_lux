@@ -79,14 +79,15 @@ void IbeoLuxRosMsgHandler::fillAndPublish(unsigned short type_id, std::shared_pt
   }
 }
 
-void IbeoLuxRosMsgHandler::fillPointcloud(std::vector<Point3D>& points, pcl::PointCloud<pcl::PointXYZ>& new_msg)
+void IbeoLuxRosMsgHandler::fillPointcloud(std::vector<Point3DL>& points, pcl::PointCloud<pcl::PointXYZL>& new_msg)
 {
-  for( Point3D p : points )
+  for( Point3DL p : points )
   {
-    pcl::PointXYZ pclp;
+    pcl::PointXYZL pclp;
     pclp.x = p.x;
     pclp.y = p.y;
     pclp.z = p.z;
+    pclp.label = p.label;
     new_msg.push_back(pclp);
   }
 }
@@ -180,19 +181,19 @@ void IbeoLuxRosMsgHandler::fillMarkerArray(std::vector<IbeoObject>& objects, vis
     }
 
     object_marker.ns = label;
+    object_marker.scale.x = 0.05;
+    object_marker.scale.y = 0.05;
+    object_marker.scale.z = 0.05;
     object_marker.type = visualization_msgs::Marker::LINE_LIST;
-    object_marker.action = visualization_msgs::Marker::ADD;
+    object_marker.action = visualization_msgs::Marker::MODIFY;
     object_marker.header.stamp = ros::Time::now();
     object_marker.header.frame_id = frame_id;
-    object_marker.scale.x = 0.1;
-    object_marker.scale.y = 0.1;
-    object_marker.scale.z = 0.1;
 
     visualization_msgs::Marker object_label;
     object_label.id  = o.id + 1000;
     object_label.ns = label;
     object_label.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
-    object_label.action = visualization_msgs::Marker::ADD;
+    object_label.action = visualization_msgs::Marker::MODIFY;
     object_label.pose.position.x = o.object_box_center.x;
     object_label.pose.position.y = o.object_box_center.y;
     object_label.pose.position.z = 0.5;
@@ -203,27 +204,11 @@ void IbeoLuxRosMsgHandler::fillMarkerArray(std::vector<IbeoObject>& objects, vis
     object_label.lifetime = object_marker.lifetime;
     object_label.color.r = object_label.color.g = object_label.color.b = 1;
     object_label.color.a = 0.5;
-    object_label.action = visualization_msgs::Marker::ADD;
     object_label.header.stamp = ros::Time::now();
     object_label.header.frame_id = frame_id;
 
-    visualization_msgs::Marker object_point_marker;
-    object_point_marker.type = visualization_msgs::Marker::POINTS;
-    object_point_marker.ns = label;
-    object_point_marker.lifetime = object_marker.lifetime;
-    object_point_marker.scale.x = 0.05;
-    object_point_marker.scale.y = 0.05;
-    object_point_marker.scale.z = 0.05;
-    object_point_marker.color.r = 0;
-    object_point_marker.color.g = 1;
-    object_point_marker.color.b = 0;
-    object_point_marker.color.a = 0.7;
-    object_point_marker.header.stamp = ros::Time::now();
-    object_point_marker.header.frame_id = frame_id;
-
     new_msg.markers.push_back(object_marker);
     new_msg.markers.push_back(object_label);
-    new_msg.markers.push_back(object_point_marker);
   }
 }
 

@@ -18,7 +18,7 @@ namespace IbeoLux
       IbeoLuxRosMsgHandler(ros::Publisher& pub, std::string frame_id);
 
       void fillAndPublish(unsigned short type_id, std::shared_ptr<IbeoTxMessage>& parser_class);
-      void fillPointcloud(std::vector<Point3D>& points, pcl::PointCloud<pcl::PointXYZ>& new_msg);
+      void fillPointcloud(std::vector<Point3DL>& points, pcl::PointCloud<pcl::PointXYZL>& new_msg);
       void fillContourPoints(std::vector<Point3D>& points, visualization_msgs::Marker& new_msg);
       void fillMarkerArray(std::vector<IbeoObject>& objects, visualization_msgs::MarkerArray& new_msg);
 
