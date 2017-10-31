@@ -89,9 +89,9 @@ void IbeoLuxRosMsgHandler::fillPointcloud(std::vector<Point3DL>& points, pcl::Po
   }
 }
 
-void IbeoLuxRosMsgHandler::fillContourPoints(std::vector<Point3D>& points, visualization_msgs::Marker& new_msg)
+void IbeoLuxRosMsgHandler::fillContourPoints(std::vector<Point3D>& points, visualization_msgs::Marker& new_msg, std::string frame_id)
 {
-  new_msg.ns = "scala";
+  new_msg.ns = frame_id;
   new_msg.type = visualization_msgs::Marker::POINTS;
   new_msg.color.r = 0.0;
   new_msg.color.g = 1.0;

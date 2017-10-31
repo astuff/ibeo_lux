@@ -258,7 +258,7 @@ int main(int argc, char **argv)
 
                 if( contour_points.size() > 0 )
                 {
-                  handler.fillContourPoints(contour_points, marker);
+                  handler.fillContourPoints(contour_points, marker, frame_id);
                   object_contour_points_pub.publish(marker);
                 }
               }
