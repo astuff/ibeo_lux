@@ -3,78 +3,75 @@
 using namespace AS::Drivers::Ibeo;
 using namespace AS::Drivers::IbeoLux;
 
-IbeoLuxRosMsgHandler::IbeoLuxRosMsgHandler(ros::Publisher& pub, std::string frame_id) :
-  pub(pub),
-  frame_id(frame_id)
-{
-}
-
-void IbeoLuxRosMsgHandler::fillAndPublish(unsigned short type_id, std::shared_ptr<IbeoTxMessage>& parser_class)
+void IbeoLuxRosMsgHandler::fillAndPublish(const unsigned short& type_id,
+                                          std::string frame_id,
+                                          ros::Publisher& pub,
+                                          std::shared_ptr<IbeoTxMessage>& parser_class)
 {
   if (type_id == ErrorWarning::DATA_TYPE)
   {
     ibeo_msgs::ErrorWarning new_msg;
-    fill2030(parser_class, new_msg);
+    fill2030(parser_class, new_msg, frame_id);
     pub.publish(new_msg);
   }
   else if (type_id == ScanData2202::DATA_TYPE)
   {
     ibeo_msgs::ScanData2202 new_msg;
-    fill2202(parser_class, new_msg);
+    fill2202(parser_class, new_msg, frame_id);
     pub.publish(new_msg);
   }
   else if (type_id == ScanData2204::DATA_TYPE)
   {
     ibeo_msgs::ScanData2204 new_msg;
-    fill2204(parser_class, new_msg);
+    fill2204(parser_class, new_msg, frame_id);
     pub.publish(new_msg);
   }
   else if (type_id == ScanData2205::DATA_TYPE)
   {
     ibeo_msgs::ScanData2205 new_msg;
-    fill2205(parser_class, new_msg);
+    fill2205(parser_class, new_msg, frame_id);
     pub.publish(new_msg);
   }
   else if (type_id == ObjectData2221::DATA_TYPE)
   {
     ibeo_msgs::ObjectData2221 new_msg;
-    fill2221(parser_class, new_msg);
+    fill2221(parser_class, new_msg, frame_id);
     pub.publish(new_msg);
   }
   else if (type_id == ObjectData2225::DATA_TYPE)
   {
     ibeo_msgs::ObjectData2225 new_msg;
-    fill2225(parser_class, new_msg);
+    fill2225(parser_class, new_msg, frame_id);
     pub.publish(new_msg);
   }
   else if (type_id == ObjectData2280::DATA_TYPE)
   {
     ibeo_msgs::ObjectData2280 new_msg;
-    fill2280(parser_class, new_msg);
+    fill2280(parser_class, new_msg, frame_id);
     pub.publish(new_msg);
   }
   else if (type_id == CameraImage::DATA_TYPE)
   {
     ibeo_msgs::CameraImage new_msg;
-    fill2403(parser_class, new_msg);
+    fill2403(parser_class, new_msg, frame_id);
     pub.publish(new_msg);
   }
   else if (type_id == HostVehicleState2805::DATA_TYPE)
   {
     ibeo_msgs::HostVehicleState2805 new_msg;
-    fill2805(parser_class, new_msg);
+    fill2805(parser_class, new_msg, frame_id);
     pub.publish(new_msg);
   }
   else if (type_id == HostVehicleState2806::DATA_TYPE)
   {
     ibeo_msgs::HostVehicleState2806 new_msg;
-    fill2806(parser_class, new_msg);
+    fill2806(parser_class, new_msg, frame_id);
     pub.publish(new_msg);
   }
   else if (type_id == HostVehicleState2807::DATA_TYPE)
   {
     ibeo_msgs::HostVehicleState2807 new_msg;
-    fill2807(parser_class, new_msg);
+    fill2807(parser_class, new_msg, frame_id);
     pub.publish(new_msg);
   }
 }
@@ -114,7 +111,7 @@ void IbeoLuxRosMsgHandler::fillContourPoints(std::vector<Point3D>& points, visua
   }
 }
 
-void IbeoLuxRosMsgHandler::fillMarkerArray(std::vector<IbeoObject>& objects, visualization_msgs::MarkerArray& new_msg)
+void IbeoLuxRosMsgHandler::fillMarkerArray(std::vector<IbeoObject>& objects, visualization_msgs::MarkerArray& new_msg, std::string frame_id)
 {
   for( IbeoObject o : objects )
   {
@@ -226,7 +223,7 @@ void IbeoLuxRosMsgHandler::fillIbeoHeader(IbeoDataHeader& class_header, ibeo_msg
   msg_header.stamp = ntp_to_ros_time(class_header.time);
 }
 
-void IbeoLuxRosMsgHandler::fill2030(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::ErrorWarning& new_msg)
+void IbeoLuxRosMsgHandler::fill2030(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::ErrorWarning& new_msg, std::string frame_id)
 {
   auto dc_parser = std::dynamic_pointer_cast<ErrorWarning>(parser_class);
 
@@ -274,7 +271,7 @@ void IbeoLuxRosMsgHandler::fill2030(std::shared_ptr<IbeoTxMessage>& parser_class
   new_msg.header.stamp = ros::Time::now();
 }
 
-void IbeoLuxRosMsgHandler::fill2202(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::ScanData2202& new_msg)
+void IbeoLuxRosMsgHandler::fill2202(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::ScanData2202& new_msg, std::string frame_id)
 {
   auto dc_parser = std::dynamic_pointer_cast<ScanData2202>(parser_class);
 
@@ -320,7 +317,7 @@ void IbeoLuxRosMsgHandler::fill2202(std::shared_ptr<IbeoTxMessage>& parser_class
   new_msg.header.stamp = ros::Time::now();
 }
 
-void IbeoLuxRosMsgHandler::fill2204(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::ScanData2204& new_msg)
+void IbeoLuxRosMsgHandler::fill2204(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::ScanData2204& new_msg, std::string frame_id)
 {
   auto dc_parser = std::dynamic_pointer_cast<ScanData2204>(parser_class);
 
@@ -383,7 +380,7 @@ void IbeoLuxRosMsgHandler::fill2204(std::shared_ptr<IbeoTxMessage>& parser_class
   new_msg.header.stamp = ros::Time::now();
 }
 
-void IbeoLuxRosMsgHandler::fill2205(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::ScanData2205& new_msg)
+void IbeoLuxRosMsgHandler::fill2205(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::ScanData2205& new_msg, std::string frame_id)
 {
   auto dc_parser = std::dynamic_pointer_cast<ScanData2205>(parser_class);
 
@@ -463,7 +460,7 @@ void IbeoLuxRosMsgHandler::fill2205(std::shared_ptr<IbeoTxMessage>& parser_class
   new_msg.header.stamp = ros::Time::now();
 }
 
-void IbeoLuxRosMsgHandler::fill2221(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::ObjectData2221& new_msg)
+void IbeoLuxRosMsgHandler::fill2221(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::ObjectData2221& new_msg, std::string frame_id)
 {
   auto dc_parser = std::dynamic_pointer_cast<ObjectData2221>(parser_class);
 
@@ -527,7 +524,7 @@ void IbeoLuxRosMsgHandler::fill2221(std::shared_ptr<IbeoTxMessage>& parser_class
   new_msg.header.stamp = ros::Time::now();
 }
 
-void IbeoLuxRosMsgHandler::fill2225(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::ObjectData2225& new_msg)
+void IbeoLuxRosMsgHandler::fill2225(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::ObjectData2225& new_msg, std::string frame_id)
 {
   auto dc_parser = std::dynamic_pointer_cast<ObjectData2225>(parser_class);
 
@@ -614,7 +611,7 @@ void IbeoLuxRosMsgHandler::fill2225(std::shared_ptr<IbeoTxMessage>& parser_class
   new_msg.header.stamp = ros::Time::now();
 }
 
-void IbeoLuxRosMsgHandler::fill2280(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::ObjectData2280& new_msg)
+void IbeoLuxRosMsgHandler::fill2280(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::ObjectData2280& new_msg, std::string frame_id)
 {
   auto dc_parser = std::dynamic_pointer_cast<ObjectData2280>(parser_class);
 
@@ -766,7 +763,7 @@ void IbeoLuxRosMsgHandler::fill2280(std::shared_ptr<IbeoTxMessage>& parser_class
   new_msg.header.stamp = ros::Time::now();
 }
 
-void IbeoLuxRosMsgHandler::fill2403(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::CameraImage& new_msg)
+void IbeoLuxRosMsgHandler::fill2403(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::CameraImage& new_msg, std::string frame_id)
 {
   auto dc_parser = std::dynamic_pointer_cast<CameraImage>(parser_class);
 
@@ -818,7 +815,7 @@ void IbeoLuxRosMsgHandler::fill2403(std::shared_ptr<IbeoTxMessage>& parser_class
   new_msg.header.stamp = ros::Time::now();
 }
 
-void IbeoLuxRosMsgHandler::fill2805(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::HostVehicleState2805& new_msg)
+void IbeoLuxRosMsgHandler::fill2805(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::HostVehicleState2805& new_msg, std::string frame_id)
 {
   auto dc_parser = std::dynamic_pointer_cast<HostVehicleState2805>(parser_class);
 
@@ -843,7 +840,7 @@ void IbeoLuxRosMsgHandler::fill2805(std::shared_ptr<IbeoTxMessage>& parser_class
   new_msg.header.stamp = ros::Time::now();
 }
 
-void IbeoLuxRosMsgHandler::fill2806(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::HostVehicleState2806& new_msg)
+void IbeoLuxRosMsgHandler::fill2806(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::HostVehicleState2806& new_msg, std::string frame_id)
 {
   auto dc_parser = std::dynamic_pointer_cast<HostVehicleState2806>(parser_class);
 
@@ -872,7 +869,7 @@ void IbeoLuxRosMsgHandler::fill2806(std::shared_ptr<IbeoTxMessage>& parser_class
   new_msg.header.stamp = ros::Time::now();
 }
 
-void IbeoLuxRosMsgHandler::fill2807(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::HostVehicleState2807& new_msg)
+void IbeoLuxRosMsgHandler::fill2807(std::shared_ptr<IbeoTxMessage>& parser_class, ibeo_msgs::HostVehicleState2807& new_msg, std::string frame_id)
 {
   auto dc_parser = std::dynamic_pointer_cast<HostVehicleState2807>(parser_class);
 

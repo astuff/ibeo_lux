@@ -33,6 +33,8 @@ using namespace AS::Drivers::Ibeo;
 using namespace AS::Drivers::IbeoLux;
 
 TCPInterface tcp_interface;
+IbeoLuxRosMsgHandler handler;
+std::unordered_map<int64_t, ros::Publisher> pub_list;
 
 // Main routine
 int main(int argc, char **argv)
@@ -88,8 +90,6 @@ int main(int argc, char **argv)
   if(exit)
     return 0;
 
-  std::unordered_map<unsigned short, IbeoLuxRosMsgHandler> handler_list;
-
   // Advertise messages to send
   ros::Publisher raw_tcp_pub = n.advertise<network_interface::TCPFrame>("tcp_tx", 1);
   ros::Publisher pointcloud_pub = n.advertise<pcl::PointCloud <pcl::PointXYZ> >("as_tx/point_cloud", 1);
@@ -107,15 +107,10 @@ int main(int argc, char **argv)
     vehicle_state_pub = n.advertise<ibeo_msgs::HostVehicleState2805>("parsed_tx/host_vehicle_state_2805", 1);
     error_warn_pub = n.advertise<ibeo_msgs::ErrorWarning>("parsed_tx/error_warning", 1);
 
-    IbeoLuxRosMsgHandler handler_2030(error_warn_pub, frame_id);
-    IbeoLuxRosMsgHandler handler_2202(scan_data_pub, frame_id);
-    IbeoLuxRosMsgHandler handler_2221(object_data_pub, frame_id);
-    IbeoLuxRosMsgHandler handler_2805(vehicle_state_pub, frame_id);
-
-    handler_list.insert(std::make_pair(ErrorWarning::DATA_TYPE, handler_2030));
-    handler_list.insert(std::make_pair(ScanData2202::DATA_TYPE, handler_2202));
-    handler_list.insert(std::make_pair(ObjectData2221::DATA_TYPE, handler_2221));
-    handler_list.insert(std::make_pair(HostVehicleState2805::DATA_TYPE, handler_2805));
+    pub_list.insert(std::make_pair(ErrorWarning::DATA_TYPE, error_warn_pub));
+    pub_list.insert(std::make_pair(ScanData2202::DATA_TYPE, scan_data_pub));
+    pub_list.insert(std::make_pair(ObjectData2221::DATA_TYPE, object_data_pub));
+    pub_list.insert(std::make_pair(HostVehicleState2805::DATA_TYPE, vehicle_state_pub));
   }
   else //Fusion ECU Only
   {
@@ -127,21 +122,13 @@ int main(int argc, char **argv)
     fusion_vehicle_2806_pub = n.advertise<ibeo_msgs::HostVehicleState2806>("parsed_tx/host_vehicle_state_2806", 1);
     fusion_vehicle_2807_pub = n.advertise<ibeo_msgs::HostVehicleState2807>("parsed_tx/host_vehicle_state_2807", 1);
 
-    IbeoLuxRosMsgHandler handler_2204(fusion_scan_2204_pub, frame_id);
-    IbeoLuxRosMsgHandler handler_2205(fusion_scan_2205_pub, frame_id);
-    IbeoLuxRosMsgHandler handler_2225(fusion_object_2225_pub, frame_id);
-    IbeoLuxRosMsgHandler handler_2280(fusion_object_2280_pub, frame_id);
-    IbeoLuxRosMsgHandler handler_2403(fusion_img_2403_pub, frame_id);
-    IbeoLuxRosMsgHandler handler_2806(fusion_vehicle_2806_pub, frame_id);
-    IbeoLuxRosMsgHandler handler_2807(fusion_vehicle_2807_pub, frame_id);
-
-    handler_list.insert(std::make_pair(ScanData2204::DATA_TYPE, handler_2204));
-    handler_list.insert(std::make_pair(ScanData2205::DATA_TYPE, handler_2205));
-    handler_list.insert(std::make_pair(ObjectData2225::DATA_TYPE, handler_2225));
-    handler_list.insert(std::make_pair(ObjectData2280::DATA_TYPE, handler_2280));
-    handler_list.insert(std::make_pair(CameraImage::DATA_TYPE, handler_2403));
-    handler_list.insert(std::make_pair(HostVehicleState2806::DATA_TYPE, handler_2806));
-    handler_list.insert(std::make_pair(HostVehicleState2807::DATA_TYPE, handler_2807));
+    pub_list.insert(std::make_pair(ScanData2204::DATA_TYPE, fusion_scan_2204_pub));
+    pub_list.insert(std::make_pair(ScanData2205::DATA_TYPE, fusion_scan_2205_pub));
+    pub_list.insert(std::make_pair(ObjectData2225::DATA_TYPE, fusion_object_2225_pub));
+    pub_list.insert(std::make_pair(ObjectData2280::DATA_TYPE, fusion_object_2280_pub));
+    pub_list.insert(std::make_pair(CameraImage::DATA_TYPE, fusion_img_2403_pub));
+    pub_list.insert(std::make_pair(HostVehicleState2806::DATA_TYPE, fusion_vehicle_2806_pub));
+    pub_list.insert(std::make_pair(HostVehicleState2807::DATA_TYPE, fusion_vehicle_2807_pub));
   }
 
   // Wait for time to be valid
@@ -243,13 +230,13 @@ int main(int argc, char **argv)
             ibeo_header.parse(messages[i].data());
 
             auto class_parser = IbeoTxMessage::make_message(ibeo_header.data_type_id); //Instantiate a parser class of the correct type.
-            auto msg_handler = handler_list.find(ibeo_header.data_type_id); //Look up the message handler for this type.
+            auto pub = pub_list.find(ibeo_header.data_type_id); //Look up the message publisher for this type.
 
             //Only parse message types we know how to handle.
-            if (class_parser != NULL && msg_handler != handler_list.end())
+            if (class_parser != NULL && pub != pub_list.end())
             {
               class_parser->parse(messages[i].data()); //Parse the raw data into the class.
-              msg_handler->second.fillAndPublish(ibeo_header.data_type_id, class_parser); //Create a new message of the correct type and publish it.
+              handler.fillAndPublish(ibeo_header.data_type_id, frame_id, pub->second, class_parser); //Create a new message of the correct type and publish it.
 
               if (class_parser->has_scan_points)
               {
@@ -258,7 +245,7 @@ int main(int argc, char **argv)
                 //pcl_cloud.header.stamp = ibeo_header.time;
                 pcl_conversions::toPCL(ros::Time::now(), pcl_cloud.header.stamp);
                 std::vector<Point3DL> scan_points = class_parser->get_scan_points();
-                msg_handler->second.fillPointcloud(scan_points, pcl_cloud);
+                handler.fillPointcloud(scan_points, pcl_cloud);
                 pointcloud_pub.publish(pcl_cloud);
               }
 
@@ -271,7 +258,7 @@ int main(int argc, char **argv)
 
                 if( contour_points.size() > 0 )
                 {
-                  msg_handler->second.fillContourPoints(contour_points, marker);
+                  handler.fillContourPoints(contour_points, marker);
                   object_contour_points_pub.publish(marker);
                 }
               }
@@ -280,7 +267,7 @@ int main(int argc, char **argv)
               {
                 std::vector<IbeoObject> objects = class_parser->get_objects();
                 visualization_msgs::MarkerArray marker_array;
-                msg_handler->second.fillMarkerArray(objects, marker_array);
+                handler.fillMarkerArray(objects, marker_array, frame_id);
 
                 for( visualization_msgs::Marker m : marker_array.markers )
                 {
