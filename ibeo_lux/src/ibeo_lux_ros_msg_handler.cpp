@@ -126,7 +126,7 @@ void IbeoLuxRosMsgHandler::fillMarkerArray(std::vector<IbeoObject>& objects, vis
     object_marker.pose.orientation.y = quaternion.y();
     object_marker.pose.orientation.z = quaternion.z();
     object_marker.pose.orientation.w = quaternion.w();
-    object_marker.lifetime = ros::Duration(5);
+    object_marker.lifetime = ros::Duration(0.5);
     object_marker.color.a = 0.5;
     object_marker.color.r = object_marker.color.g = object_marker.color.b = 1.0;
     object_marker.frame_locked = false;
