@@ -196,7 +196,7 @@ int main(int argc, char **argv)
           //TODO: FMEA on following loop.
           while (true)
           {
-            first_mw = find_magic_word((uint8_t*) grand_buffer.data() + 1, grand_buffer.size(), MAGIC_WORD);
+            first_mw = find_magic_word(grand_buffer.data(), grand_buffer.size(), MAGIC_WORD);
 
             if(first_mw == -1) // no magic word found. move along.
             {
@@ -204,10 +204,22 @@ int main(int argc, char **argv)
             }
             else  // magic word found. pull out message from grand buffer and add it to the message list.
             {
+              if (first_mw > 0)
+                grand_buffer.erase(grand_buffer.begin(), grand_buffer.begin() + first_mw); // Unusable data in beginning of buffer.
+
+              // From here on, the detected Magic Word should be at the beginning of the grand_buffer.
+
+              IbeoDataHeader header;
               std::vector<unsigned char> msg;
-              msg.insert(msg.end(),grand_buffer.begin(), grand_buffer.begin() + first_mw + 1);
+
+              header.parse(grand_buffer.data());
+
+              if (grand_buffer.size() < IBEO_HEADER_SIZE + header.message_size)
+                break; // Incomplete message left in grand buffer. Wait for next read.
+
+              msg.insert(msg.end(), grand_buffer.begin(), grand_buffer.begin() + IBEO_HEADER_SIZE + header.message_size + 1);
               messages.push_back(msg);
-              grand_buffer.erase(grand_buffer.begin(), grand_buffer.begin() + first_mw + 1);
+              grand_buffer.erase(grand_buffer.begin(), grand_buffer.begin() + IBEO_HEADER_SIZE + header.message_size + 1);
             }
           }
         }
