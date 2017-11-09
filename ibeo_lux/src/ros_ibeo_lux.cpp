@@ -193,7 +193,6 @@ int main(int argc, char **argv)
           int first_mw = 0;
           //ROS_INFO("Finished reading %d bytes of data. Total buffer size is %d.",bytes_read, grand_buffer.size());
 
-          //TODO: FMEA on following loop.
           while (true)
           {
             first_mw = find_magic_word(grand_buffer.data(), grand_buffer.size(), MAGIC_WORD);
@@ -221,6 +220,9 @@ int main(int argc, char **argv)
               messages.push_back(msg);
               grand_buffer.erase(grand_buffer.begin(), grand_buffer.begin() + IBEO_HEADER_SIZE + header.message_size + 1);
             }
+
+            if (!ros::ok())
+              break;
           }
         }
 
