@@ -1,0 +1,45 @@
+pipelines:
+  default:
+    - parallel:
+      - step:
+          name: Indigo
+          image: ros:indigo-perception
+          script:
+            - apt-get update && apt-get install openssh-client python-catkin-tools build-essential -y
+            - git submodule init && git submodule update
+            - source `find /opt/ros -name setup.bash | sort | head -1` && echo $ROS_DISTRO
+            - mkdir src && mv `find -maxdepth 1 -not -name . -not -name src` src/
+            - git clone https://github.com/astuff/astuff_sensor_msgs src/astuff_sensor_msgs
+            - git clone https://github.com/astuff/platform_automation_msgs src/platform_automation_msgs
+            - git clone https://github.com/astuff/network_interface src/network_interface
+            - rosdep install --from-paths src --ignore-src -y
+            - catkin init
+            - catkin build
+      - step:
+          name: Kinetic
+          image: ros:kinetic-perception
+          script:
+            - apt-get update && apt-get install openssh-client python-catkin-tools build-essential -y
+            - git submodule init && git submodule update
+            - source `find /opt/ros -name setup.bash | sort | head -1` && echo $ROS_DISTRO
+            - mkdir src && mv `find -maxdepth 1 -not -name . -not -name src` src/
+            - git clone https://github.com/astuff/astuff_sensor_msgs src/astuff_sensor_msgs
+            - git clone https://github.com/astuff/platform_automation_msgs src/platform_automation_msgs
+            - git clone https://github.com/astuff/network_interface src/network_interface
+            - rosdep install --from-paths src --ignore-src -y
+            - catkin init
+            - catkin build
+      - step:
+          name: Lunar
+          image: ros:lunar-perception
+          script:
+            - apt-get update && apt-get install openssh-client python-catkin-tools build-essential -y
+            - git submodule init && git submodule update
+            - source `find /opt/ros -name setup.bash | sort | head -1` && echo $ROS_DISTRO
+            - mkdir src && mv `find -maxdepth 1 -not -name . -not -name src` src/
+            - git clone https://github.com/astuff/astuff_sensor_msgs src/astuff_sensor_msgs
+            - git clone https://github.com/astuff/platform_automation_msgs src/platform_automation_msgs
+            - git clone https://github.com/astuff/network_interface src/network_interface
+            - rosdep install --from-paths src --ignore-src -y
+            - catkin init
+            - catkin build
