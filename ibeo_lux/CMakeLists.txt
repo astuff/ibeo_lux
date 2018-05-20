@@ -7,6 +7,7 @@ add_definitions(-std=c++11 -Wall -Wextra -DBUILD_ROS)
 find_package(catkin REQUIRED COMPONENTS
   network_interface
   roscpp
+  ibeo_core
   std_msgs
   pcl_ros
   geometry_msgs
@@ -18,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(CATKIN_DEPENDS
   network_interface
   std_msgs
+  ibeo_core
   pcl_ros
   geometry_msgs
   visualization_msgs
@@ -32,7 +34,6 @@ include_directories(
 )
 
 add_executable(${PROJECT_NAME}
-  core_ibeo/src/ibeo_core.cpp
   src/ros_ibeo_lux.cpp
   src/ibeo_lux_ros_msg_handler.cpp
 )

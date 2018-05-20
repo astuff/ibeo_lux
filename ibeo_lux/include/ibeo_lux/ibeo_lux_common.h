@@ -1,7 +1,7 @@
 #ifndef IBEO_LUX_COMMON_H
 #define IBEO_LUX_COMMON_H
 
-#include <ibeo_core.h>
+#include <ibeo_core/ibeo_core.h>
 #include <ros/ros.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
