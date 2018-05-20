@@ -1,0 +1,6 @@
+- git:
+    local-name: astuff_sensor_msgs
+    uri: https://github.com/astuff/astuff_sensor_msgs
+- git:
+    local-name: ibeo_core
+    uri: https://github.com/astuff/ibeo_core
