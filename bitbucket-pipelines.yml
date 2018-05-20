@@ -12,6 +12,7 @@ pipelines:
             - git clone https://github.com/astuff/astuff_sensor_msgs src/astuff_sensor_msgs
             - git clone https://github.com/astuff/platform_automation_msgs src/platform_automation_msgs
             - git clone https://github.com/astuff/network_interface src/network_interface
+            - git clone https://github.com/astuff/ibeo_core src/ibeo_core
             - rosdep install --from-paths src --ignore-src -y
             - catkin init
             - catkin build
@@ -26,6 +27,7 @@ pipelines:
             - git clone https://github.com/astuff/astuff_sensor_msgs src/astuff_sensor_msgs
             - git clone https://github.com/astuff/platform_automation_msgs src/platform_automation_msgs
             - git clone https://github.com/astuff/network_interface src/network_interface
+            - git clone https://github.com/astuff/ibeo_core src/ibeo_core
             - rosdep install --from-paths src --ignore-src -y
             - catkin init
             - catkin build
@@ -40,6 +42,7 @@ pipelines:
             - git clone https://github.com/astuff/astuff_sensor_msgs src/astuff_sensor_msgs
             - git clone https://github.com/astuff/platform_automation_msgs src/platform_automation_msgs
             - git clone https://github.com/astuff/network_interface src/network_interface
+            - git clone https://github.com/astuff/ibeo_core src/ibeo_core
             - rosdep install --from-paths src --ignore-src -y
             - catkin init
             - catkin build
