@@ -9,8 +9,8 @@
   <author email="jkale@autonomoustuff.com">Joe Kale</author>
   <author email="jwhitley@autonomoustuff.com">Joshua Whitley</author>
 
-  <url type="bugtracker">https://bitbucket.org/autonomoustuff/ros_ibeo_lux/issues</url>
-  <url type="repository">https://bitbucket.org/autonomoustuff/ros_ibeo_lux</url>
+  <url type="bugtracker">https://github.com/astuff/ibeo_lux/issues</url>
+  <url type="repository">https://github.com/astuff/ibeo_lux</url>
 
   <buildtool_depend>catkin</buildtool_depend>
 
