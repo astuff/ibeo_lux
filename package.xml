@@ -3,7 +3,7 @@
   <name>ibeo_lux</name>
   <version>2.0.0</version>
   <description>ROS driver for IBEO LUX</description>
-  <license>LGPLv2.1</license>
+  <license>MIT</license>
 
   <maintainer email="software@autonomoustuff.com">AutonomouStuff Software Development Team</maintainer>
   <author email="jkale@autonomoustuff.com">Joe Kale</author>
