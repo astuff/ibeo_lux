@@ -44,10 +44,9 @@ int main(int argc, char **argv)
   int port = 12002;
   string frame_id = "ibeo_lux";
   bool is_fusion = false;
-  size_t bytes_read;
-  int buf_size = IBEO_PAYLOAD_SIZE;
-  std::vector<unsigned char> grand_buffer;
-  std::vector<std::vector<unsigned char>> messages;
+  size_t bytes_read = 0;
+  std::vector<uint8_t> grand_buffer;
+  std::vector<std::vector<uint8_t>> messages;
 
   // ROS initialization
   ros::init(argc, argv, "ibeo_lux");
@@ -161,11 +160,14 @@ int main(int argc, char **argv)
     {
       if(is_fusion && !fusion_filter_sent)
       {
-        unsigned char set_filter_cmd[32] = {0xaf, 0xfe, 0xc0, 0xc2, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x20, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x02, 0x00, 0x00, 0xff,0xff};
+        std::vector<uint8_t> set_filter_cmd = {0xaf, 0xfe, 0xc0, 0xc2, 0x00, 0x00, 0x00, 0x00,
+                                               0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x20, 0x10,
+                                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                               0x00, 0x05, 0x00, 0x02, 0x00, 0x00, 0xff, 0xff};
 
         ROS_INFO_THROTTLE(3, "Ibeo LUX - Sending Fusion filter command to begin transmission.");
 
-        status = tcp_interface.write(set_filter_cmd, sizeof(set_filter_cmd));
+        status = tcp_interface.write(set_filter_cmd);
 
         if (status != OK) 
           ROS_ERROR_THROTTLE(3, "Ibeo LUX - Failed to send Fusion filter command.");
@@ -176,10 +178,9 @@ int main(int argc, char **argv)
       }
       else
       {
-        buf_size = IBEO_PAYLOAD_SIZE;
-        std::unique_ptr<unsigned char[]> msg_buf(new unsigned char[buf_size + 1]);
+        std::vector<uint8_t> msg_buf;
 
-        status = tcp_interface.read(msg_buf.get(), buf_size, bytes_read); //Read a (big) chunk.
+        status = tcp_interface.read(&msg_buf, bytes_read); //Read a (big) chunk.
 
         if (status != OK && status != NO_MESSAGES_RECEIVED)
         {
@@ -187,15 +188,16 @@ int main(int argc, char **argv)
         }
         else if (status == OK)
         {
-          buf_size = bytes_read;
-          grand_buffer.insert(grand_buffer.end(), msg_buf.get(), msg_buf.get() + bytes_read);
+          grand_buffer.reserve(grand_buffer.size() + msg_buf.size());
+          std::move<vector<uint8_t>::iterator, vector<uint8_t>::iterator>(msg_buf.begin(), msg_buf.end(), grand_buffer.end());
+          msg_buf.erase(msg_buf.begin(), msg_buf.end());
 
           int first_mw = 0;
           //ROS_INFO("Finished reading %d bytes of data. Total buffer size is %d.",bytes_read, grand_buffer.size());
 
           while (true)
           {
-            first_mw = find_magic_word(grand_buffer.data(), grand_buffer.size(), MAGIC_WORD);
+            first_mw = find_magic_word(grand_buffer.begin(), grand_buffer.end(), MAGIC_WORD);
 
             if(first_mw == -1) // no magic word found. move along.
             {
@@ -216,14 +218,15 @@ int main(int argc, char **argv)
               IbeoDataHeader header;
               std::vector<unsigned char> msg;
 
-              header.parse(grand_buffer.data());
+              header.parse(grand_buffer.begin());
 
               //ROS_DEBUG("Calculated size of message: %u", IBEO_HEADER_SIZE + header.message_size);
 
               if (grand_buffer.size() < IBEO_HEADER_SIZE + header.message_size)
                 break; // Incomplete message left in grand buffer. Wait for next read.
 
-              msg.insert(msg.end(), grand_buffer.begin(), grand_buffer.begin() + IBEO_HEADER_SIZE + header.message_size);
+              msg.reserve(msg.size() + IBEO_HEADER_SIZE + header.message_size);
+              std::move<vector<uint8_t>::iterator, vector<uint8_t>::iterator>(grand_buffer.begin(), grand_buffer.begin() + IBEO_HEADER_SIZE + header.message_size, msg.end());
               //ROS_DEBUG("Size of copied message: %lu", msg.size());
               messages.push_back(msg);
               grand_buffer.erase(grand_buffer.begin(), grand_buffer.begin() + IBEO_HEADER_SIZE + header.message_size);
@@ -251,7 +254,7 @@ int main(int argc, char **argv)
 						raw_tcp_pub.publish(raw_frame);
 
             IbeoDataHeader ibeo_header;
-            ibeo_header.parse(messages[i].data());
+            ibeo_header.parse(messages[i].begin());
 
             auto class_parser = IbeoTxMessage::make_message(ibeo_header.data_type_id); //Instantiate a parser class of the correct type.
             auto pub = pub_list.find(ibeo_header.data_type_id); //Look up the message publisher for this type.
@@ -259,7 +262,7 @@ int main(int argc, char **argv)
             //Only parse message types we know how to handle.
             if (class_parser != NULL && pub != pub_list.end())
             {
-              class_parser->parse(messages[i].data()); //Parse the raw data into the class.
+              class_parser->parse(messages[i].begin()); //Parse the raw data into the class.
               handler.fillAndPublish(ibeo_header.data_type_id, frame_id, pub->second, class_parser); //Create a new message of the correct type and publish it.
 
               if (class_parser->has_scan_points)
