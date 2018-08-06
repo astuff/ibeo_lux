@@ -1,3 +1,9 @@
 - git:
+    local-name: network_interface
+    uri: https://github.com/astuff/network_interface
+    version: maint/return_vectors
+
+- git:
     local-name: ibeo_core
     uri: https://github.com/astuff/ibeo_core
+    version: maint/updates_to_network_interface
