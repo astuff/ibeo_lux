@@ -10,7 +10,6 @@ jobs:
           command: |
             apt-get update && apt-get install openssh-client python-catkin-tools build-essential -y
             source `find /opt/ros -name setup.bash | sort | head -1`
-            git clone https://github.com/astuff/ibeo_core
             rosdep install --from-paths . --ignore-src -y
             cd ..
             catkin init
@@ -37,7 +36,6 @@ jobs:
           command: |
             apt-get update && apt-get install openssh-client python-catkin-tools build-essential -y
             source `find /opt/ros -name setup.bash | sort | head -1`
-            git clone https://github.com/astuff/ibeo_core
             rosdep install --from-paths . --ignore-src -y
             cd ..
             catkin init
@@ -64,7 +62,6 @@ jobs:
           command: |
             apt-get update && apt-get install openssh-client python-catkin-tools build-essential -y
             source `find /opt/ros -name setup.bash | sort | head -1`
-            git clone https://github.com/astuff/ibeo_core
             rosdep install --from-paths . --ignore-src -y
             cd ..
             catkin init
@@ -91,7 +88,6 @@ jobs:
           command: |
             apt-get update && apt-get install openssh-client python-catkin-tools build-essential -y
             source `find /opt/ros -name setup.bash | sort | head -1`
-            git clone https://github.com/astuff/ibeo_core
             rosdep install --from-paths . --ignore-src -y
             cd ..
             catkin init
