@@ -2,8 +2,8 @@
 Changelog for package ibeo_lux
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.0.0 (2018-07-05)
+------------------
 * Updating package.xml with correct URLs.
 * Changing package.xml to reflect correct license.
 * Adding product page to README.
