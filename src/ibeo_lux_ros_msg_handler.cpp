@@ -616,7 +616,9 @@ void IbeoLuxRosMsgHandler::fill2280(std::shared_ptr<IbeoTxMessage>& parser_class
   auto dc_parser = std::dynamic_pointer_cast<ObjectData2280>(parser_class);
 
   fillIbeoHeader(dc_parser->ibeo_header, new_msg.ibeo_header);
+
   new_msg.mid_scan_timestamp = ntp_to_ros_time(dc_parser->mid_scan_timestamp);
+  new_msg.number_of_objects = dc_parser->number_of_objects;
 
   for (auto object : dc_parser->object_list)
   {
