@@ -746,7 +746,7 @@ void IbeoLuxRosMsgHandler::fill2280(std::shared_ptr<IbeoTxMessage>& parser_class
 
     object_msg.absolute_velocity.x = object.absolute_velocity.x;
     object_msg.absolute_velocity.y = object.absolute_velocity.y;
-    // object.number_of_contour_points;
+    object_msg.number_of_contour_points = object.number_of_contour_points;
     int i = 0;
     for (auto contour_point : object.contour_point_list)
     {
