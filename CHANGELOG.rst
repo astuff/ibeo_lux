@@ -2,8 +2,8 @@
 Changelog for package ibeo_lux
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.0.1 (2018-12-07)
+------------------
 * Merge pull request `#5 <https://github.com/astuff/ibeo_lux/issues/5>`_ from astuff/maint/add_urls
   Adding website URL to package.xml. Fixing changelog.
 * Merge pull request `#6 <https://github.com/astuff/ibeo_lux/issues/6>`_ from ShepelIlya/patch-1
