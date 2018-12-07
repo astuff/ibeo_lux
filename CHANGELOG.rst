@@ -2,6 +2,15 @@
 Changelog for package ibeo_lux
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge pull request `#5 <https://github.com/astuff/ibeo_lux/issues/5>`_ from astuff/maint/add_urls
+  Adding website URL to package.xml. Fixing changelog.
+* Merge pull request `#6 <https://github.com/astuff/ibeo_lux/issues/6>`_ from ShepelIlya/patch-1
+* Added filling of number_of_objects field to ObjectData2280 message
+  Now uint16 field with number of objects in message is filling in IbeoLuxRosMsgHandler::fill2280 function.
+* Contributors: Joshua Whitley, Rinda Gunjala, Sam Rustan, ShepelIlya, Zach Oakes
+
 2.0.0 (2018-07-05)
 ------------------
 * Updating package.xml with correct URLs.
