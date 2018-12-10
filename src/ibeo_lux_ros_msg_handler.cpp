@@ -746,8 +746,7 @@ void IbeoLuxRosMsgHandler::fill2280(std::shared_ptr<IbeoTxMessage>& parser_class
 
     object_msg.absolute_velocity.x = object.absolute_velocity.x;
     object_msg.absolute_velocity.y = object.absolute_velocity.y;
-    // object.number_of_contour_points;
-    int i = 0;
+    object_msg.number_of_contour_points = object.number_of_contour_points;
     for (auto contour_point : object.contour_point_list)
     {
       ibeo_msgs::Point2Df msg_cp;
@@ -755,7 +754,6 @@ void IbeoLuxRosMsgHandler::fill2280(std::shared_ptr<IbeoTxMessage>& parser_class
       msg_cp.y = contour_point.y;
 
       object_msg.contour_point_list.push_back(msg_cp);
-      i++;
     }
 
     new_msg.objects.push_back(object_msg);
