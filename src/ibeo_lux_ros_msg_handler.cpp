@@ -213,7 +213,7 @@ void IbeoLuxRosMsgHandler::fillMarkerArray(std::vector<IbeoObject>& objects, vis
 
 ros::Time IbeoLuxRosMsgHandler::ntp_to_ros_time(NTPTime time)
 {
-  return ros::Time(((time >> 32) - OFFSET), (time & 0x0000FFFF));
+  return ros::Time(((time >> 32) - NTP_TO_UTC), (time & 0x0000FFFF));
 }
 
 void IbeoLuxRosMsgHandler::fillIbeoHeader(IbeoDataHeader& class_header, ibeo_msgs::IbeoDataHeader& msg_header)
