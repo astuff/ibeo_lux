@@ -52,8 +52,7 @@ jobs:
       - run:
           name: Lint
           command: |
-            cd ..
-            catkin build --no-deps --make-args roslint
+            catkin bt --no-deps --make-args roslint
       - run:
           name: Run Tests
           command: |
@@ -83,8 +82,7 @@ jobs:
       - run:
           name: Lint
           command: |
-            cd ..
-            catkin build --no-deps --make-args roslint
+            catkin bt --no-deps --make-args roslint
       - run:
           name: Run Tests
           command: |
