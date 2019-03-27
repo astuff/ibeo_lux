@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#define NTP_TO_UTC 2208988800
+
 using namespace AS::Drivers::Ibeo;
 using namespace AS::Drivers::IbeoLux;
 
@@ -232,7 +234,7 @@ void IbeoLuxRosMsgHandler::fillMarkerArray(
 
 ros::Time IbeoLuxRosMsgHandler::ntp_to_ros_time(const NTPTime& time)
 {
-  return ros::Time(((time & 0xFFFF0000) >> 32), (time & 0x0000FFFF));
+  return ros::Time(((time >> 32) - NTP_TO_UTC), (time & 0x0000FFFF));
 }
 
 void IbeoLuxRosMsgHandler::fillIbeoHeader(
