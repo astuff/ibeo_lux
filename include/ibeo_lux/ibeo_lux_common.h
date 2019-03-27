@@ -1,5 +1,12 @@
-#ifndef IBEO_LUX_COMMON_H
-#define IBEO_LUX_COMMON_H
+/*
+ * Unpublished Copyright (c) 2009-2019 AutonomouStuff, LLC, All Rights Reserved.
+ *
+ * This file is part of the ibeo_lux ROS 1.0 driver which is released under the MIT license.
+ * See file LICENSE included with this software or go to https://opensource.org/licenses/MIT for full license details.
+ */
+
+#ifndef IBEO_LUX_IBEO_LUX_COMMON_H
+#define IBEO_LUX_IBEO_LUX_COMMON_H
 
 #include <ibeo_core/ibeo_core.h>
 #include <ros/ros.h>
@@ -32,4 +39,4 @@
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 
-#endif
+#endif  // IBEO_LUX_IBEO_LUX_COMMON_H
