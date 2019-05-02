@@ -10,6 +10,9 @@ jobs:
           command: |
             apt-get update -qq
             source `find /opt/ros -name setup.bash | sort | head -1`
+            mkdir ibeo_lux && mv `find -maxdepth 1 -not -name . -not -name ibeo_lux` ibeo_lux/
+            git clone https://github.com/astuff/network_interface -b maint/cpp_11_cleanup
+            git clone https://github.com/astuff/ibeo_core -b maint/network_interface_updates
             rosdep install --from-paths . --ignore-src -y
             cd ..
             catkin init
@@ -38,6 +41,9 @@ jobs:
           command: |
             apt-get update -qq
             source `find /opt/ros -name setup.bash | sort | head -1`
+            mkdir ibeo_lux && mv `find -maxdepth 1 -not -name . -not -name ibeo_lux` ibeo_lux/
+            git clone https://github.com/astuff/network_interface -b maint/cpp_11_cleanup
+            git clone https://github.com/astuff/ibeo_core -b maint/network_interface_updates
             rosdep install --from-paths . --ignore-src -y
             cd ..
             catkin init
