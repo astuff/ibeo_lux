@@ -308,9 +308,9 @@ int main(int argc, char **argv)
 
               object_markers_pub.publish(marker_array);
             }
-
-            messages.pop();
           }
+
+          messages.pop();
         }  // Message parse loop
       }    // If fusion filter sent or != fusion
     }      // If sensor is connected
