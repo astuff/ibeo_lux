@@ -8,7 +8,6 @@
 #ifndef IBEO_LUX_IBEO_LUX_ROS_MSG_HANDLER_H
 #define IBEO_LUX_IBEO_LUX_ROS_MSG_HANDLER_H
 
-#include <ibeo_core/utils.h>
 #include <ibeo_lux/ibeo_lux_common.h>
 
 #include <string>

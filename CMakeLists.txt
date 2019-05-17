@@ -46,6 +46,10 @@ add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 set(ROSLINT_CPP_OPTS "--filter=-build/namespaces")
 roslint_cpp()
 
+if(CATKIN_ENABLE_TESTING)
+  roslint_add_test()
+endif()
+
 install(TARGETS ${PROJECT_NAME}
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

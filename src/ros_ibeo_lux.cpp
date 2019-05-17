@@ -7,12 +7,15 @@
 
 #include <ibeo_lux/ibeo_lux_ros_msg_handler.h>
 #include <network_interface/network_interface.h>
+#include <network_interface/network_utils.h>
 
 // Tx
 #include <network_interface/TCPFrame.h>
 
 #include <unordered_map>
 #include <vector>
+#include <queue>
+#include <deque>
 #include <string>
 
 using std::string;
@@ -32,10 +35,9 @@ int main(int argc, char **argv)
   int port = 12002;
   string frame_id = "ibeo_lux";
   bool is_fusion = false;
-  size_t bytes_read;
   int buf_size = AS::Drivers::Ibeo::IBEO_PAYLOAD_SIZE;
-  std::vector<unsigned char> grand_buffer;
-  std::vector<std::vector<unsigned char>> messages;
+  std::deque<uint8_t> grand_buffer;
+  std::queue<std::vector<uint8_t>> messages;
 
   // ROS initialization
   ros::init(argc, argv, "ibeo_lux");
@@ -130,7 +132,7 @@ int main(int argc, char **argv)
 
   network_interface::TCPFrame tcp_raw_msg;
 
-  return_statuses status;
+  ReturnStatuses status;
 
   ros::Rate loop_rate = (is_fusion) ? ros::Rate(1100) : ros::Rate(40);
   // Loop as long as module should run
@@ -146,10 +148,10 @@ int main(int argc, char **argv)
 
       status = tcp_interface.open(ip_address.c_str(), port);
 
-      if (status != OK)
+      if (status != ReturnStatuses::OK)
         ROS_WARN("Ibeo LUX - Unable to connect to sensor at %s: %d - %s",
             ip_address.c_str(),
-            status, return_status_desc(status).c_str());
+            static_cast<int>(status), return_status_desc(status).c_str());
 
       ros::Duration(1.0).sleep();
     }
@@ -157,7 +159,7 @@ int main(int argc, char **argv)
     {
       if (is_fusion && !fusion_filter_sent)
       {
-        unsigned char set_filter_cmd[32] =
+        std::vector<uint8_t> set_filter_cmd =
           {0xaf, 0xfe, 0xc0, 0xc2,
            0x00, 0x00, 0x00, 0x00,
            0x00, 0x00, 0x00, 0x08,
@@ -169,9 +171,9 @@ int main(int argc, char **argv)
 
         ROS_INFO_THROTTLE(3, "Ibeo LUX - Sending Fusion filter command to begin transmission.");
 
-        status = tcp_interface.write(set_filter_cmd, sizeof(set_filter_cmd));
+        status = tcp_interface.write(set_filter_cmd);
 
-        if (status != OK)
+        if (status != ReturnStatuses::OK)
           ROS_ERROR_THROTTLE(3, "Ibeo LUX - Failed to send Fusion filter command.");
         else
           fusion_filter_sent = true;
@@ -181,25 +183,27 @@ int main(int argc, char **argv)
       else
       {
         buf_size = IBEO_PAYLOAD_SIZE;
-        std::unique_ptr<unsigned char[]> msg_buf(new unsigned char[buf_size + 1]);
+        std::vector<uint8_t> msg_buf;
+        msg_buf.reserve(buf_size);
 
-        status = tcp_interface.read(msg_buf.get(), buf_size, bytes_read);  // Read a (big) chunk.
+        status = tcp_interface.read(&msg_buf);  // Read a (big) chunk.
 
-        if (status != OK && status != NO_MESSAGES_RECEIVED)
+        if (status != ReturnStatuses::OK && status != ReturnStatuses::NO_MESSAGES_RECEIVED)
         {
-          ROS_WARN("Ibeo ScaLa - Failed to read from socket: %d - %s", status, return_status_desc(status).c_str());
+          ROS_WARN("Ibeo ScaLa - Failed to read from socket: %d - %s",
+              static_cast<int>(status),
+              return_status_desc(status).c_str());
         }
-        else if (status == OK)
+        else if (status == ReturnStatuses::OK)
         {
-          buf_size = bytes_read;
-          grand_buffer.insert(grand_buffer.end(), msg_buf.get(), msg_buf.get() + bytes_read);
+          buf_size = msg_buf.size();
+          grand_buffer.insert(grand_buffer.end(), msg_buf.begin(), msg_buf.end());
 
           int first_mw = 0;
-          // ROS_INFO("Finished reading %d bytes of data. Total buffer size is %d.",bytes_read, grand_buffer.size());
 
           while (true)
           {
-            first_mw = find_magic_word(grand_buffer.data(), grand_buffer.size(), MAGIC_WORD);
+            first_mw = find_magic_word(grand_buffer, MAGIC_WORD);
 
             if (first_mw == -1)  // no magic word found. move along.
             {
@@ -207,9 +211,6 @@ int main(int argc, char **argv)
             }
             else  // magic word found. pull out message from grand buffer and add it to the message list.
             {
-              // ROS_DEBUG("Size before removing unused bytes: %lu", grand_buffer.size());
-              // ROS_DEBUG("Location of MW: %i", first_mw);
-
               if (first_mw > 0)
                 grand_buffer.erase(
                     grand_buffer.begin(),
@@ -217,29 +218,21 @@ int main(int argc, char **argv)
 
               // From here on, the detected Magic Word should be at the beginning of the grand_buffer.
 
-              // ROS_DEBUG("Size before reading message: %lu", grand_buffer.size());
-
               IbeoDataHeader header;
-              std::vector<unsigned char> msg;
+              header.parse(std::vector<uint8_t>(grand_buffer.begin(), grand_buffer.begin() + IBEO_HEADER_SIZE));
 
-              header.parse(grand_buffer.data());
+              auto total_msg_size = IBEO_HEADER_SIZE + header.message_size;
 
-              // ROS_DEBUG("Calculated size of message: %u", IBEO_HEADER_SIZE + header.message_size);
-
-              if (grand_buffer.size() < IBEO_HEADER_SIZE + header.message_size)
+              if (grand_buffer.size() < total_msg_size)
                 break;  // Incomplete message left in grand buffer. Wait for next read.
 
-              msg.insert(
-                  msg.end(),
+              std::vector<uint8_t> msg(
                   grand_buffer.begin(),
-                  grand_buffer.begin() + IBEO_HEADER_SIZE + header.message_size);
-              // ROS_DEBUG("Size of copied message: %lu", msg.size());
-              messages.push_back(msg);
+                  grand_buffer.begin() + total_msg_size);
+              messages.push(msg);
               grand_buffer.erase(
                   grand_buffer.begin(),
-                  grand_buffer.begin() + IBEO_HEADER_SIZE + header.message_size);
-
-              // ROS_DEBUG("Size after reading message: %lu", grand_buffer.size());
+                  grand_buffer.begin() + total_msg_size);
             }
 
             if (!ros::ok())
@@ -247,79 +240,78 @@ int main(int argc, char **argv)
           }
         }
 
-        if (!messages.empty())
+        while (!messages.empty())
         {
-          for (unsigned int i = 0; i < messages.size(); i++)
+          auto message = messages.front();
+
+          network_interface::TCPFrame raw_frame;
+          raw_frame.address = ip_address;
+          raw_frame.port = port;
+          raw_frame.size = message.size();
+          raw_frame.data.insert(raw_frame.data.end(), message.begin(), message.end());
+          raw_frame.header.frame_id = frame_id;
+          raw_frame.header.stamp = ros::Time::now();
+
+          raw_tcp_pub.publish(raw_frame);
+
+          IbeoDataHeader ibeo_header;
+          ibeo_header.parse(message);
+
+          // Instantiate a parser class of the correct type.
+          auto class_parser = IbeoTxMessage::make_message(ibeo_header.data_type_id);
+          // Look up the message publisher for this type.
+          auto pub = pub_list.find(ibeo_header.data_type_id);
+
+          // Only parse message types we know how to handle.
+          if (class_parser != NULL && pub != pub_list.end())
           {
-            network_interface::TCPFrame raw_frame;
-            raw_frame.address = ip_address;
-            raw_frame.port = port;
-            raw_frame.size = messages[i].size();
-            raw_frame.data.insert(raw_frame.data.begin(), messages[i].begin(), messages[i].end());
-            raw_frame.header.frame_id = frame_id;
-            raw_frame.header.stamp = ros::Time::now();
+            // Parse the raw data into the class.
+            class_parser->parse(message);
+            // Create a new message of the correct type and publish it.
+            handler.fillAndPublish(ibeo_header.data_type_id, frame_id, pub->second, class_parser.get());
 
-            raw_tcp_pub.publish(raw_frame);
-
-            IbeoDataHeader ibeo_header;
-            ibeo_header.parse(messages[i].data());
-
-            // Instantiate a parser class of the correct type.
-            auto class_parser = IbeoTxMessage::make_message(ibeo_header.data_type_id);
-            // Look up the message publisher for this type.
-            auto pub = pub_list.find(ibeo_header.data_type_id);
-
-            // Only parse message types we know how to handle.
-            if (class_parser != NULL && pub != pub_list.end())
+            if (class_parser->has_scan_points)
             {
-              // Parse the raw data into the class.
-              class_parser->parse(messages[i].data());
-              // Create a new message of the correct type and publish it.
-              handler.fillAndPublish(ibeo_header.data_type_id, frame_id, pub->second, class_parser.get());
+              pcl::PointCloud<pcl::PointXYZL> pcl_cloud;
+              pcl_cloud.header.frame_id = frame_id;
+              // pcl_cloud.header.stamp = ibeo_header.time;
+              pcl_conversions::toPCL(ros::Time::now(), pcl_cloud.header.stamp);
+              std::vector<Point3DL> scan_points = class_parser->get_scan_points();
+              handler.fillPointcloud(scan_points, &pcl_cloud);
+              pointcloud_pub.publish(pcl_cloud);
+            }
 
-              if (class_parser->has_scan_points)
+            if (class_parser->has_contour_points)
+            {
+              visualization_msgs::Marker marker;
+              marker.header.frame_id = frame_id;
+              marker.header.stamp = ros::Time::now();
+              std::vector<Point3D> contour_points = class_parser->get_contour_points();
+
+              if (contour_points.size() > 0)
               {
-                pcl::PointCloud<pcl::PointXYZL> pcl_cloud;
-                pcl_cloud.header.frame_id = frame_id;
-                // pcl_cloud.header.stamp = ibeo_header.time;
-                pcl_conversions::toPCL(ros::Time::now(), pcl_cloud.header.stamp);
-                std::vector<Point3DL> scan_points = class_parser->get_scan_points();
-                handler.fillPointcloud(scan_points, &pcl_cloud);
-                pointcloud_pub.publish(pcl_cloud);
-              }
-
-              if (class_parser->has_contour_points)
-              {
-                visualization_msgs::Marker marker;
-                marker.header.frame_id = frame_id;
-                marker.header.stamp = ros::Time::now();
-                std::vector<Point3D> contour_points = class_parser->get_contour_points();
-
-                if (contour_points.size() > 0)
-                {
-                  handler.fillContourPoints(contour_points, &marker, frame_id);
-                  object_contour_points_pub.publish(marker);
-                }
-              }
-
-              if (class_parser->has_objects)
-              {
-                std::vector<IbeoObject> objects = class_parser->get_objects();
-                visualization_msgs::MarkerArray marker_array;
-                handler.fillMarkerArray(objects, &marker_array, frame_id);
-
-                for (visualization_msgs::Marker m : marker_array.markers)
-                {
-                  m.header.frame_id = frame_id;
-                }
-
-                object_markers_pub.publish(marker_array);
+                handler.fillContourPoints(contour_points, &marker, frame_id);
+                object_contour_points_pub.publish(marker);
               }
             }
-          }  // Message parse loop
 
-          messages.clear();
-        }  // Messages were found
+            if (class_parser->has_objects)
+            {
+              std::vector<IbeoObject> objects = class_parser->get_objects();
+              visualization_msgs::MarkerArray marker_array;
+              handler.fillMarkerArray(objects, &marker_array, frame_id);
+
+              for (visualization_msgs::Marker m : marker_array.markers)
+              {
+                m.header.frame_id = frame_id;
+              }
+
+              object_markers_pub.publish(marker_array);
+            }
+          }
+
+          messages.pop();
+        }  // Message parse loop
       }    // If fusion filter sent or != fusion
     }      // If sensor is connected
 
@@ -329,10 +321,10 @@ int main(int argc, char **argv)
 
   status = tcp_interface.close();
 
-  if (status != OK)
+  if (status != ReturnStatuses::OK)
     ROS_ERROR(
         "Ibeo LUX - Closing the connection to the LUX failed: %i - %s",
-        status,
+        static_cast<int>(status),
         return_status_desc(status).c_str());
 
   return 0;

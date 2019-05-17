@@ -10,6 +10,9 @@ jobs:
           command: |
             apt-get update -qq
             source `find /opt/ros -name setup.bash | sort | head -1`
+            mkdir ibeo_lux && mv `find -maxdepth 1 -not -name . -not -name ibeo_lux` ibeo_lux/
+            git clone https://github.com/astuff/network_interface
+            git clone https://github.com/astuff/ibeo_core
             rosdep install --from-paths . --ignore-src -y
             cd ..
             catkin init
@@ -19,48 +22,12 @@ jobs:
           command: |
             cd ..
             catkin build
-      - run:
-          name: Lint
-          command: |
-            catkin bt --no-deps --make-args roslint
       - run:
           name: Run Tests
           command: |
             source /opt/ros/kinetic/setup.bash
             cd ..
-            catkin run_tests
-            catkin_test_results
-    working_directory: ~/src
-
-  lunar:
-    docker:
-      - image: autonomoustuff/docker-builds:lunar-perception
-    steps:
-      - checkout
-      - run:
-          name: Set Up Container
-          command: |
-            apt-get update -qq
-            source `find /opt/ros -name setup.bash | sort | head -1`
-            rosdep install --from-paths . --ignore-src -y
-            cd ..
-            catkin init
-            catkin config --extend /opt/ros/$ROS_DISTRO
-      - run:
-          name: Build
-          command: |
-            cd ..
-            catkin build
-      - run:
-          name: Lint
-          command: |
-            catkin bt --no-deps --make-args roslint
-      - run:
-          name: Run Tests
-          command: |
-            source /opt/ros/lunar/setup.bash
-            cd ..
-            catkin run_tests
+            catkin run_tests --no-deps ibeo_lux
             catkin_test_results
     working_directory: ~/src
 
@@ -74,6 +41,9 @@ jobs:
           command: |
             apt-get update -qq
             source `find /opt/ros -name setup.bash | sort | head -1`
+            mkdir ibeo_lux && mv `find -maxdepth 1 -not -name . -not -name ibeo_lux` ibeo_lux/
+            git clone https://github.com/astuff/network_interface
+            git clone https://github.com/astuff/ibeo_core
             rosdep install --from-paths . --ignore-src -y
             cd ..
             catkin init
@@ -84,15 +54,11 @@ jobs:
             cd ..
             catkin build
       - run:
-          name: Lint
-          command: |
-            catkin bt --no-deps --make-args roslint
-      - run:
           name: Run Tests
           command: |
             source /opt/ros/melodic/setup.bash
             cd ..
-            catkin run_tests
+            catkin run_tests --no-deps ibeo_lux
             catkin_test_results
     working_directory: ~/src
 
@@ -101,5 +67,4 @@ workflows:
   ros_build:
     jobs:
       - kinetic
-      - lunar
       - melodic
