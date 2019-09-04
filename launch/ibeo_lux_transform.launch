@@ -4,7 +4,7 @@
   <arg name="lux_frame_id" default="ibeo_lux"/>
   <arg name="is_fusion_ecu" default="false"/>
   <arg name="name" default="ibeo_lux"/>
-  <arg name="ip_address" default="192.168.0.1" />
+  <arg name="ip_address" default="192.168.0.100" />
   <arg name="port" default="12002" />
 
   <node pkg="tf" type="static_transform_publisher" name="$(arg veh_frame_id)_to_$(arg lux_frame_id)" args="0 0 0 0 0 0 $(arg veh_frame_id) $(arg lux_frame_id) 100"/>

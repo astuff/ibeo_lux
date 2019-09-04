@@ -123,6 +123,10 @@ void IbeoLuxRosMsgHandler::fillMarkerArray(std::vector<IbeoObject>& objects, vis
                                                                      o.object_box_size.size_x,
                                                                      o.object_box_size.size_y,
                                                                      0.75);
+
+
+
+
     object_marker.id  = o.id;
     object_marker.pose.orientation.x = quaternion.x();
     object_marker.pose.orientation.y = quaternion.y();
@@ -931,13 +935,13 @@ visualization_msgs::Marker IbeoLuxRosMsgHandler::createWireframeMarker(const flo
   p4.y = half_y;
   p4.z = size_z;
   p5 = p1;
-  p5.z = -size_z;
+  p5.z = 0; 
   p6 = p2;
-  p6.z = -size_z;
+  p6.z = 0; 
   p7 = p3;
-  p7.z = -size_z;
+  p7.z = 0; 
   p8 = p4;
-  p8.z = -size_z;
+  p8.z = 0; 
 
   box.points.reserve(24);
 

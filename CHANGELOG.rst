@@ -2,6 +2,18 @@
 Changelog for package ibeo_lux
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Little name fix
+* Fix of ntp_to_ros_time function
+  Fixed conversion from NTP64 time for ros time. ROS uses Unix Epoch Time, so NTP time causes overflow and 'secs' field always was zero.
+* CI: Removing Indigo build.
+* Merge pull request `#7 <https://github.com/astuff/ibeo_lux/issues/7>`_ from ShepelIlya/master
+  Fixed field of ObjectData2280, contour points
+* Deleted redunant code
+* Filled field number of contour points.
+* Contributors: Joshua Whitley, Sam Rustan, ShepelIlya, Шепель Илья Олегович
+
 2.0.1 (2018-12-07)
 ------------------
 * Merge pull request `#5 <https://github.com/astuff/ibeo_lux/issues/5>`_ from astuff/maint/add_urls
