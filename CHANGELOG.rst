@@ -2,7 +2,7 @@
 Changelog for package ibeo_lux
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.0.2
+2.0.2 (2019-09-03)
 -----------
 * Rolled back to a known working version of the Ibeo Lux Driver. Minor fix to the function that draws bounding boxes around the objects. 
 * Little name fix
