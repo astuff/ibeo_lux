@@ -2,8 +2,9 @@
 Changelog for package ibeo_lux
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
+2.0.2
 -----------
+* Rolled back to a known working version of the Ibeo Lux Driver. Minor fix to the function that draws bounding boxes around the objects. 
 * Little name fix
 * Fix of ntp_to_ros_time function
   Fixed conversion from NTP64 time for ros time. ROS uses Unix Epoch Time, so NTP time causes overflow and 'secs' field always was zero.
