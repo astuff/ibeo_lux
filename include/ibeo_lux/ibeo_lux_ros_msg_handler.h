@@ -24,7 +24,7 @@ namespace IbeoLux
 class IbeoLuxRosMsgHandler
 {
 public:
-  void fillAndPublish(const uint8_t& type_id,
+  void fillAndPublish(const uint16_t& type_id,
                       const std::string& frame_id,
                       const ros::Publisher& pub,
                       IbeoTxMessage * parser_class);
@@ -61,6 +61,10 @@ private:
   void fill2205(
     IbeoTxMessage * parser_class,
     ibeo_msgs::ScanData2205 * new_msg,
+    const std::string& frame_id);
+  void fill2209(
+    IbeoTxMessage * parser_class,
+    ibeo_msgs::ScanData2209 * new_msg,
     const std::string& frame_id);
   void fill2221(
     IbeoTxMessage * parser_class,

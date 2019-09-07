@@ -89,6 +89,7 @@ int main(int argc, char **argv)
   ros::Publisher scan_data_pub, object_data_pub, vehicle_state_pub, error_warn_pub;
   ros::Publisher fusion_scan_2204_pub,
     fusion_scan_2205_pub,
+    fusion_scan_2209_pub,
     fusion_object_2225_pub,
     fusion_object_2280_pub,
     fusion_img_2403_pub,
@@ -112,6 +113,7 @@ int main(int argc, char **argv)
   {
     fusion_scan_2204_pub = n.advertise<ibeo_msgs::ScanData2204>("parsed_tx/scan_data_2204", 1);
     fusion_scan_2205_pub = n.advertise<ibeo_msgs::ScanData2205>("parsed_tx/scan_data_2205", 1);
+    fusion_scan_2209_pub = n.advertise<ibeo_msgs::ScanData2209>("parsed_tx/scan_data_2209", 1);
     fusion_object_2225_pub = n.advertise<ibeo_msgs::ObjectData2225>("parsed_tx/object_data_2225", 1);
     fusion_object_2280_pub = n.advertise<ibeo_msgs::ObjectData2280>("parsed_tx/object_data_2280", 1);
     fusion_img_2403_pub = n.advertise<ibeo_msgs::CameraImage>("parsed_tx/camera_image", 1);
@@ -120,6 +122,7 @@ int main(int argc, char **argv)
 
     pub_list.insert(std::make_pair(ScanData2204::DATA_TYPE, fusion_scan_2204_pub));
     pub_list.insert(std::make_pair(ScanData2205::DATA_TYPE, fusion_scan_2205_pub));
+    pub_list.insert(std::make_pair(ScanData2209::DATA_TYPE, fusion_scan_2209_pub));
     pub_list.insert(std::make_pair(ObjectData2225::DATA_TYPE, fusion_object_2225_pub));
     pub_list.insert(std::make_pair(ObjectData2280::DATA_TYPE, fusion_object_2280_pub));
     pub_list.insert(std::make_pair(CameraImage::DATA_TYPE, fusion_img_2403_pub));
