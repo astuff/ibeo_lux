@@ -24,6 +24,9 @@
 #include <ibeo_msgs/ScanPoint2205.h>
 #include <ibeo_msgs/ScannerInfo2205.h>
 #include <ibeo_msgs/ScanData2205.h>
+#include <ibeo_msgs/ScanPoint2209.h>
+#include <ibeo_msgs/ScannerInfo2209.h>
+#include <ibeo_msgs/ScanData2209.h>
 #include <ibeo_msgs/Object2221.h>
 #include <ibeo_msgs/ObjectData2221.h>
 #include <ibeo_msgs/Object2225.h>

@@ -16,7 +16,7 @@ using namespace AS::Drivers::Ibeo;
 using namespace AS::Drivers::IbeoLux;
 
 void IbeoLuxRosMsgHandler::fillAndPublish(
-    const uint8_t& type_id,
+    const uint16_t& type_id,
     const std::string& frame_id,
     const ros::Publisher& pub,
     IbeoTxMessage * parser_class)
@@ -43,6 +43,12 @@ void IbeoLuxRosMsgHandler::fillAndPublish(
   {
     ibeo_msgs::ScanData2205 new_msg;
     fill2205(parser_class, &new_msg, frame_id);
+    pub.publish(new_msg);
+  }
+    else if (type_id == ScanData2209::DATA_TYPE)
+  {
+    ibeo_msgs::ScanData2209 new_msg;
+    fill2209(parser_class, &new_msg, frame_id);
     pub.publish(new_msg);
   }
   else if (type_id == ObjectData2221::DATA_TYPE)
@@ -477,6 +483,90 @@ void IbeoLuxRosMsgHandler::fill2205(
   for (auto scan_point : dc_parser->scan_point_list)
   {
     ibeo_msgs::ScanPoint2205 scan_point_msg;
+
+    scan_point_msg.x_position = scan_point.x_position;
+    scan_point_msg.y_position = scan_point.y_position;
+    scan_point_msg.z_position = scan_point.z_position;
+    scan_point_msg.echo_width = scan_point.echo_width;
+    scan_point_msg.device_id = scan_point.device_id;
+    scan_point_msg.layer = scan_point.layer;
+    scan_point_msg.echo = scan_point.echo;
+    scan_point_msg.time_offset = scan_point.time_offset;
+    scan_point_msg.ground = scan_point.ground;
+    scan_point_msg.dirt = scan_point.dirt;
+    scan_point_msg.precipitation = scan_point.precipitation;
+    scan_point_msg.transparent = scan_point.transparent;
+
+    new_msg->scan_point_list.push_back(scan_point_msg);
+  }
+
+  new_msg->header.frame_id = frame_id;
+  new_msg->header.stamp = ros::Time::now();
+}
+
+void IbeoLuxRosMsgHandler::fill2209(
+    IbeoTxMessage * parser_class,
+    ibeo_msgs::ScanData2209 * new_msg,
+    const std::string& frame_id)
+{
+  auto dc_parser = dynamic_cast<ScanData2209*>(parser_class);
+
+  fillIbeoHeader(dc_parser->ibeo_header, &(new_msg->ibeo_header));
+
+  new_msg->scan_start_time = ntp_to_ros_time(dc_parser->scan_start_time);
+  new_msg->scan_end_time_offset = dc_parser->scan_end_time_offset;
+  new_msg->fused_scan = dc_parser->fused_scan;
+
+  if (dc_parser->mirror_side == FRONT)
+    new_msg->mirror_side = ibeo_msgs::ScanData2209::FRONT;
+  else
+    new_msg->mirror_side = ibeo_msgs::ScanData2209::REAR;
+
+  if (dc_parser->coordinate_system == SCANNER)
+    new_msg->coordinate_system = ibeo_msgs::ScanData2209::SCANNER;
+  else
+    new_msg->coordinate_system = ibeo_msgs::ScanData2209::VEHICLE;
+
+  new_msg->scan_number = dc_parser->scan_number;
+  new_msg->scan_points = dc_parser->scan_points;
+  new_msg->number_of_scanner_infos = dc_parser->number_of_scanner_infos;
+
+  for (auto scanner_info : dc_parser->scanner_info_list)
+  {
+    ibeo_msgs::ScannerInfo2209 scanner_info_msg;
+
+    scanner_info_msg.device_id = scanner_info.device_id;
+    scanner_info_msg.scanner_type = scanner_info.scanner_type;
+    scanner_info_msg.scan_number = scanner_info.scan_number;
+    scanner_info_msg.start_angle = scanner_info.start_angle;
+    scanner_info_msg.end_angle = scanner_info.end_angle;
+    scanner_info_msg.scan_start_time = ntp_to_ros_time(scanner_info.scan_start_time);
+    scanner_info_msg.scan_end_time = ntp_to_ros_time(scanner_info.scan_end_time);
+    scanner_info_msg.scan_start_time_from_device = ntp_to_ros_time(scanner_info.scan_start_time_from_device);
+    scanner_info_msg.scan_end_time_from_device = ntp_to_ros_time(scanner_info.scan_end_time_from_device);
+    scanner_info_msg.scan_frequency = scanner_info.scan_frequency;
+    scanner_info_msg.beam_tilt = scanner_info.beam_tilt;
+    scanner_info_msg.scan_flags = scanner_info.scan_flags;
+
+    scanner_info_msg.mounting_position.yaw_angle = scanner_info.mounting_position.yaw_angle;
+    scanner_info_msg.mounting_position.pitch_angle = scanner_info.mounting_position.pitch_angle;
+    scanner_info_msg.mounting_position.roll_angle = scanner_info.mounting_position.roll_angle;
+    scanner_info_msg.mounting_position.x_position = scanner_info.mounting_position.x_position;
+    scanner_info_msg.mounting_position.y_position = scanner_info.mounting_position.y_position;
+    scanner_info_msg.mounting_position.z_position = scanner_info.mounting_position.z_position;
+    for (int i = 0; i < 8; i++)
+    {
+      scanner_info_msg.resolutions[i].resolution_start_angle =
+        scanner_info.resolutions[i].resolution_start_angle;
+      scanner_info_msg.resolutions[i].resolution = scanner_info.resolutions[i].resolution;
+    }
+
+    new_msg->scanner_info_list.push_back(scanner_info_msg);
+  }
+
+  for (auto scan_point : dc_parser->scan_point_list)
+  {
+    ibeo_msgs::ScanPoint2209 scan_point_msg;
 
     scan_point_msg.x_position = scan_point.x_position;
     scan_point_msg.y_position = scan_point.y_position;
